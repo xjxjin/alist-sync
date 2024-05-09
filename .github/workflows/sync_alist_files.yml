@@ -1,0 +1,33 @@
+name: Sync Alist Files
+
+# 定义工作流触发条件，这里使用定时任务
+on:
+  schedule:
+    - cron:  '1-5 1-5 * * *' # 每天凌晨1到5点之间随机时间触发
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install requests
+
+    - name: Run sync script
+      env:
+        BASE_URL: ${{ secrets.BASE_URL }}
+        USERNAME: ${{ secrets.USERNAME }}
+        PASSWORD: ${{ secrets.PASSWORD }}
+        DIR_PAIRS: ${{ secrets.DIR_PAIRS }}
+      run: |
+        python alist-sync.py --base_url "$BASE_URL" --username "$USERNAME" --password "$PASSWORD" --dir_pairs "$DIR_PAIRS"
