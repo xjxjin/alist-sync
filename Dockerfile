@@ -8,7 +8,7 @@ WORKDIR /app
 COPY alist-sync.py /app/
 
 # 安装cron和其它可能需要的依赖
-RUN apk update && apk add cron
+RUN apk update && apk add --no-cache cron
 
 # 复制启动脚本
 COPY start.sh /app/
