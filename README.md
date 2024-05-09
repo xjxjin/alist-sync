@@ -45,5 +45,7 @@ DIR_PAIRS
 python3 alist-sync.py --base_url "$BASE_URL" --username "$USERNAME" --password "$PASSWORD" --dir_pairs "$DIR_PAIRS"
 ```
 
+## 执行完成后可以在复制页面查看进度
+<img width="1628" alt="image" src="https://github.com/xjxjin/alist-sync/assets/35513148/f2b907a2-8d84-4b01-a748-8d08e570af5e">
 
 
