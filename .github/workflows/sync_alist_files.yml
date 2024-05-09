@@ -4,7 +4,9 @@ name: Sync Alist Files
 on:
   schedule:
     - cron:  '1-5 1-5 * * *' # 每天凌晨1到5点之间随机时间触发
-
+  push:
+    paths:
+      - 'action.txt'
 jobs:
   sync:
     runs-on: ubuntu-latest
