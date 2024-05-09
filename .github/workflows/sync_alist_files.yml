@@ -2,10 +2,8 @@ name: Publish Docker image
 
 on:
   push:
-    branches:
-      - master
-    tags:
-      - '*'
+    paths:
+      - 'action.txt'
 
 jobs:
   build-and-push:
