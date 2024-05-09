@@ -5,7 +5,7 @@ FROM python:3.12.2-alpine
 WORKDIR /app
 
 # 复制当前目录下的文件到工作目录
-COPY alist-sync.py /app/
+COPY alist-sync-test.py /app/
 
 # 安装cron和其它可能需要的依赖
 RUN apk update && apk add --no-cache cron
