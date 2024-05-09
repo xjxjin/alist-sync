@@ -6,9 +6,12 @@ WORKDIR /app
 
 # 复制当前目录下的文件到工作目录
 COPY alist-sync-test.py /app/
+COPY requirements.txt /app/
 
 # 安装cron和其它可能需要的依赖
-RUN apk update && apk add --no-cache cron
+# RUN apk update && apk add --no-cache cron
+RUN pip install --no-cache-dir -r requirements.txt
+
 
 # 复制启动脚本
 COPY start.sh /app/
