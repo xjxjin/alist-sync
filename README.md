@@ -25,6 +25,20 @@
 * 源目录qwe/asd下的文件夹以及文件，同步到目标目录gds/sdf下
 
 
+## Action 执行
+需要在 secrets新增四个参数
+
+```bash
+BASE_URL
+USERNAME
+PASSWORD
+DIR_PAIRS
+```
+### 注意 DIR_PAIRS格式为  ，用<font color=red>分号隔开，冒号分隔</font>，英文冒号，英文分号
+
+
+
+
 ## 本地python执行命令           
 
 ```bash
