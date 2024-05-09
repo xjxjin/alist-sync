@@ -83,7 +83,10 @@ def recursive_copy(src_dir, dst_dir, connection, token):
         print(f"获取目录内容失败: {e}")
         print(f"获取目录【 {src_dir}】failed")
         return
-
+    # 空目录跳过
+    if not src_contents:
+        return
+        
     for item in src_contents:
         item_name = item["name"]
         item_path = f"{src_dir}/{item_name}"
