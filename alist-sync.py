@@ -156,6 +156,7 @@ def main():
 
 if __name__ == '__main__':
     # 添加任务到调度器，使用创建的CronTrigger实例
+    print(f'同步任务开始执行:{datetime.now()}')
     scheduler.add_job(main, trigger=trigger)
 
     # 开始调度器
