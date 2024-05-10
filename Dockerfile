@@ -27,4 +27,4 @@ ENV DIR_PAIRS=""
 ENV CRON_SCHEDULE="*/5 * * * *"
 
 # 启动服务
-CMD ["./app/start.sh"]
+CMD ["bash","/app/start.sh"]
