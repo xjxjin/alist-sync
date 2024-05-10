@@ -1,7 +1,32 @@
-import argparse
 import http.client
 import json
 import re
+
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
+import time
+from datetime import datetime
+import os
+
+# 解析命令行参数
+base_url = os.environ.get('BASE_URL')
+username = os.environ.get('USERNAME')
+password = os.environ.get('PASSWORD')
+dir_pairs = os.environ.get('DIR_PAIRS')
+cron_schedule = os.environ.get('CRON_SCHEDULE')
+
+
+print(f'base_url={base_url}')
+print(f'username={username}')
+print(f'password={password}')
+print(f'dir_pairs={dir_pairs}')
+print(f'cron_schedule={cron_schedule}')
+# 创建一个后台调度器实例
+scheduler = BackgroundScheduler()
+
+# 创建一个CronTrigger实例
+trigger = CronTrigger.from_crontab(cron_schedule)
+
 
 
 def create_connection(base_url):
@@ -86,7 +111,7 @@ def recursive_copy(src_dir, dst_dir, connection, token):
     # 空目录跳过
     if not src_contents:
         return
-        
+
     for item in src_contents:
         item_name = item["name"]
         item_path = f"{src_dir}/{item_name}"
@@ -108,26 +133,7 @@ def recursive_copy(src_dir, dst_dir, connection, token):
 
 
 def main():
-    # 解析命令行参数
-    parser = argparse.ArgumentParser(description="文件同步脚本")
-
-    parser.add_argument('--base_url', type=str, required=True, metavar='服务器基础URL',
-                        help="服务器基础URL")
-    parser.add_argument('--username', type=str, required=True, metavar='用户名',
-                        help="用户名")
-    parser.add_argument('--password', type=str, required=True, metavar='密码',
-                        help="密码")
-    parser.add_argument('--dir_pairs', type=str, required=True, metavar='源目录和目标目录的配对',
-                        help="源目录和目标目录的配对，用分号隔开，冒号分隔")
-
-    args = parser.parse_args()
-
-    # 使用解析后的参数创建连接和token
-    base_url = args.base_url
-    username = args.username
-    password = args.password
-    dir_pairs = args.dir_pairs
-
+    print(f"Running job at {datetime.now()}")
     conn = create_connection(base_url)
     token = get_token(conn, "/api/auth/login", username, password)
 
@@ -146,5 +152,19 @@ def main():
     conn.close()
 
 
+
+
 if __name__ == '__main__':
-    main()
+    # 添加任务到调度器，使用创建的CronTrigger实例
+    scheduler.add_job(main, trigger=trigger)
+
+    # 开始调度器
+    scheduler.start()
+
+    try:
+        # 这会阻塞主线程，但调度器在后台线程中运行
+        while True:
+            time.sleep(2)  # 防止主线程过快退出，仅为示例，实际应用中可能不需要
+    except (KeyboardInterrupt, SystemExit):
+        # 如果主线程被中断（例如用户按Ctrl+C），则关闭调度器
+        scheduler.shutdown()
