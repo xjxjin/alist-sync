@@ -159,8 +159,9 @@ if __name__ == '__main__':
     scheduler.add_job(main, trigger=trigger)
 
     # 开始调度器
+    print(f'开始调度器{datetime.now()}')
     scheduler.start()
-
+    print(f'结束调度器{datetime.now()}')
     try:
         # 这会阻塞主线程，但调度器在后台线程中运行
         while True:
