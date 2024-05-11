@@ -16,9 +16,9 @@ dir_pairs = os.environ.get('DIR_PAIRS')
 cron_schedule = os.environ.get('CRON_SCHEDULE')
 
 
-print(f'base_url={base_url}')
-print(f'username={username}')
-print(f'password={password}')
+# print(f'base_url={base_url}')
+# print(f'username={username}')
+# print(f'password={password}')
 print(f'dir_pairs={dir_pairs}')
 print(f'cron_schedule={cron_schedule}')
 # 创建一个后台调度器实例
@@ -133,7 +133,7 @@ def recursive_copy(src_dir, dst_dir, connection, token):
 
 
 def main():
-    print(f"Running job at {datetime.now()}")
+    print(f"同步任务运行开始 {datetime.now()}")
     conn = create_connection(base_url)
     token = get_token(conn, "/api/auth/login", username, password)
 
@@ -150,19 +150,18 @@ def main():
             print(f"源目录或目标目录不存在: {item}")
 
     conn.close()
-
+    print(f"同步任务运行结束 {datetime.now()}")
 
 
 
 if __name__ == '__main__':
     # 添加任务到调度器，使用创建的CronTrigger实例
-    print(f'同步任务开始执行:{datetime.now()}')
     scheduler.add_job(main, trigger=trigger)
 
     # 开始调度器
-    print(f'开始调度器{datetime.now()}')
+    # print(f'开始调度器{datetime.now()}')
     scheduler.start()
-    print(f'结束调度器{datetime.now()}')
+    # print(f'结束调度器{datetime.now()}')
     try:
         # 这会阻塞主线程，但调度器在后台线程中运行
         while True:
