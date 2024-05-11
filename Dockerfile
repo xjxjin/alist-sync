@@ -1,4 +1,4 @@
-# 使用官方的Python 3.8 Docker镜像作为基础镜像
+# 使用官方的Python 3.12.2 Docker镜像作为基础镜像
 FROM python:3.12.2-alpine
 
 # 设置工作目录
@@ -20,5 +20,7 @@ ENV DIR_PAIRS=""
 ENV CRON_SCHEDULE="*/5 * * * *"
 
 # 启动服务
+# CMD ["python", "./alist-sync.py", "--base_url", "$BASE_URL", "--username", "$USERNAME", "--password", "$PASSWORD", "--dir_pairs", "$DIR_PAIRS", "--cron_schedule", "$CRON_SCHEDULE"]
+# CMD ["python", "./alist-sync.py", "$1", "$2", "$3", "$4", "$5", "$6", "$7"]
 # CMD ["python", "./alist-sync.py", "--cron_schedule", "${CRON_SCHEDULE}", "--base_url", "${BASE_URL}", "--username", "${USERNAME}", "--password", "${PASSWORD}", "--dir_pairs", "${DIR_PAIRS}"]
 CMD ["python", "./alist-sync.py"]
