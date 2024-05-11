@@ -4,6 +4,8 @@ on:
   push:
     paths:
       - 'action.txt'
+    tags:
+      - "v*"
 
 env:
   IMAGE_NAME: ${{ github.repository }}
