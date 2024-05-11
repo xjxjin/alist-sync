@@ -9,14 +9,15 @@
 ## 参数
 
 ```bash
---base_url  服务器基础URL(结尾不带/)
---username 用户名
---password  密码
---dir_pairs  源目录和目标目录的配对(源目录和目标目录的配对，用分号隔开，冒号分隔)
+BASE_URL  服务器基础URL(结尾不带/)
+USERNAME 用户名
+PASSWORDd  密码
+DIR_PAIRS  源目录和目标目录的配对(源目录和目标目录的配对，用分号隔开，冒号分隔)
+CRON_SCHEDULE 调度日期，参考cron语法   "分 时 天 周 月"
 ```
 ### demo
 ```bash
---dir_pairs aaaa/bbbb/cccc:dddd/eeee/fff;qwe/asd:gds/sdf
+docker run -d --name alist-sync -e TZ=Asia/Shanghai -e BASE_URL="http://192.168.xxx.xx:5244" -e USERNAME="xxx" -e PASSWORD="xxx" -e DIR_PAIRS="/dav/aliyundrive/同步目录/工作:/dav/quark/同步目录1/工作" -e CRON_SCHEDULE="5 16 * * *" xjxjin/alist-sync:latest
 ```
 
 
@@ -34,16 +35,9 @@ USERNAME
 PASSWORD
 DIR_PAIRS
 ```
-### 注意 DIR_PAIRS格式为  ，用<font color=red>分号隔开，冒号分隔</font>，英文冒号，英文分号
+### 注意 DIR_PAIRS格式为  ，用分号隔开，冒号分隔，英文冒号，英文分号
 
 
-
-
-## 本地python执行命令           
-
-```bash
-python3 alist-sync.py --base_url "$BASE_URL" --username "$USERNAME" --password "$PASSWORD" --dir_pairs "$DIR_PAIRS"
-```
 
 ## 执行完成后可以在复制页面查看进度
 <img width="1628" alt="image" src="https://github.com/xjxjin/alist-sync/assets/35513148/f2b907a2-8d84-4b01-a748-8d08e570af5e">
