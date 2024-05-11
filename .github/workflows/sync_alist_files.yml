@@ -26,6 +26,7 @@ jobs:
             ${{ env.IMAGE_NAME }}
             ghcr.io/${{ env.IMAGE_NAME }}
           tags: |
+            latest
             type=ref,event=branch
             type=ref,event=tag
 
