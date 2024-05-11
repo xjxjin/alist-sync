@@ -1,9 +1,19 @@
-# alist-sync
-## 功能
+# alist网盘自动
 
+
+* alist可以设置目录定时转存到各个网盘，做到夸网盘，多备份的效果
 * 可以将自己挂载的alist 下的各个目录相互间进行同步，原理是采用alist原始api调用执行，
 * 同步原理是匹配文件名称是否相同，相同会跳过同步，不同就会将文件同步过去
 * 目前存在的一个问题，有文件会随机同步失败，但同一个文件不会一直同步失败，建议每天同步一次，可以将同步漏了的文件补上
+
+
+[![github tag][gitHub-tag-image]][github-url] [![docker pulls][docker-pulls-image]][docker-url] [![docker image size][docker-image-size-image]][docker-url]
+
+[gitHub-tag-image]: https://img.shields.io/github/v/tag/xjxjin/alist-sync
+[docker-pulls-image]: https://img.shields.io/docker/pulls/xjxjin/alist-sync
+[docker-image-size-image]: https://img.shields.io/docker/image-size/xjxjin/alist-sync
+[github-url]: https://github.com/xjxjin/alist-sync
+[docker-url]: https://hub.docker.com/r/xjxjin/alist-sync
 
 
 ## 参数
