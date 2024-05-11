@@ -13,7 +13,7 @@ BASE_URL  服务器基础URL(结尾不带/)
 USERNAME 用户名
 PASSWORDd  密码
 DIR_PAIRS  源目录和目标目录的配对(源目录和目标目录的配对，用分号隔开，冒号分隔)
-CRON_SCHEDULE 调度日期，参考cron语法   "分 时 天 周 月"
+CRON_SCHEDULE 调度日期，参考cron语法   "分 时 日 月 周"
 ```
 ### demo
 ```bash
@@ -26,15 +26,6 @@ docker run -d --name alist-sync -e TZ=Asia/Shanghai -e BASE_URL="http://192.168.
 * 源目录qwe/asd下的文件夹以及文件，同步到目标目录gds/sdf下
 
 
-## Action 执行
-需要在 secrets新增四个参数
-
-```bash
-BASE_URL
-USERNAME
-PASSWORD
-DIR_PAIRS
-```
 ### 注意 DIR_PAIRS格式为  ，用分号隔开，冒号分隔，英文冒号，英文分号
 
 
