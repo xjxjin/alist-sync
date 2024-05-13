@@ -17,7 +17,7 @@ ENV BASE_URL=""
 ENV USERNAME=""
 ENV PASSWORD=""
 ENV DIR_PAIRS=""
-ENV CRON_SCHEDULE="*/5 * * * *"
+ENV CRON_SCHEDULE=""
 
 # 启动服务
 # CMD ["python", "./alist-sync.py", "--base_url", "$BASE_URL", "--username", "$USERNAME", "--password", "$PASSWORD", "--dir_pairs", "$DIR_PAIRS", "--cron_schedule", "$CRON_SCHEDULE"]
