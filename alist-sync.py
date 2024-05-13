@@ -21,11 +21,12 @@ cron_schedule = os.environ.get('CRON_SCHEDULE')
 # print(f'password={password}')
 print(f'dir_pairs={dir_pairs}')
 print(f'cron_schedule={cron_schedule}')
-# 创建一个后台调度器实例
-scheduler = BackgroundScheduler()
+if cron_schedule:
+    # 创建一个后台调度器实例
+    scheduler = BackgroundScheduler()
 
-# 创建一个CronTrigger实例
-trigger = CronTrigger.from_crontab(cron_schedule)
+    # 创建一个CronTrigger实例
+    trigger = CronTrigger.from_crontab(cron_schedule)
 
 
 
@@ -99,6 +100,15 @@ def is_directory_exists(connection, token, directory_path):
     response = directory_operation(connection, token, "get", path=directory_path)
     return response and response.get("message", "") == "success"
 
+def is_directory_size(connection, token, directory_path):
+    # 判断文件大小
+    response = directory_operation(connection, token, "get", path=directory_path)
+    return  response["data"]["size"]
+
+def directory_remove(connection, token, directory_path):
+    # 删除文件
+    response = directory_operation(connection, token, "remove", path=directory_path)
+    return response and response.get("message", "") == "success"
 
 def recursive_copy(src_dir, dst_dir, connection, token):
     # 递归复制文件夹内容
@@ -129,7 +139,14 @@ def recursive_copy(src_dir, dst_dir, connection, token):
             if not is_directory_exists(connection, token, dst_item_path):
                 copy_item(connection, token, src_dir, dst_dir, item_name)
             else:
-                print(f'文件【{item_name}】已存在，跳过复制')
+                src_size = item["size"]
+                dst_size = is_directory_size(connection, token, dst_item_path)
+                if src_size == dst_size:
+                    print(f'文件【{item_name}】已存在，跳过复制')
+                else:
+                    print(f'文件【{item_name}】文件存在变更，删除文件')
+                    directory_remove(connection, token, dst_item_path)
+                    copy_item(connection, token, src_dir, dst_dir, item_name)
 
 
 def main():
@@ -155,17 +172,22 @@ def main():
 
 
 if __name__ == '__main__':
-    # 添加任务到调度器，使用创建的CronTrigger实例
-    scheduler.add_job(main, trigger=trigger)
+    # ... 解析命令行参数 ...
 
-    # 开始调度器
-    # print(f'开始调度器{datetime.now()}')
-    scheduler.start()
-    # print(f'结束调度器{datetime.now()}')
-    try:
-        # 这会阻塞主线程，但调度器在后台线程中运行
-        while True:
-            time.sleep(2)  # 防止主线程过快退出，仅为示例，实际应用中可能不需要
-    except (KeyboardInterrupt, SystemExit):
-        # 如果主线程被中断（例如用户按Ctrl+C），则关闭调度器
-        scheduler.shutdown()
+    # 检查CRON_SCHEDULE是否为空或者为null
+    if not cron_schedule or cron_schedule is None or cron_schedule == "None":
+        print("CRON_SCHEDULE为空，将执行一次同步任务。")
+        main()  # 执行一次同步任务
+    else:
+        # 添加任务到调度器，使用创建的CronTrigger实例
+        scheduler.add_job(main, trigger=trigger)
+
+        # 开始调度器
+        scheduler.start()
+        try:
+            # 这会阻塞主线程，但调度器在后台线程中运行
+            while True:
+                time.sleep(1)
+        except (KeyboardInterrupt, SystemExit):
+            # 如果主线程被中断（例如用户按Ctrl+C），则关闭调度器
+            scheduler.shutdown()
