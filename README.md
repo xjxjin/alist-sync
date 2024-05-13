@@ -1,6 +1,6 @@
 <div align="center">
   
-# alist网盘自动
+# alist网盘自动同步
 </div>
 
 * alist可以设置目录定时转存到各个网盘，做到夸网盘，多备份的效果
