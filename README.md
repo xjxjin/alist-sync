@@ -75,4 +75,29 @@ services:
  * 文件名称 
  * 文件大小
 ### 2.CRON_SCHEDULE 变更为参数可选
- * 当参数不传变更为一次调度，可以配合青龙远程调度 
+ * 当参数不传变更为一次调度，可以配合青龙远程调度
+
+## 2024-05-23更新
+* 新增青龙调度
+
+需要在环境变量处设置参数
+
+```bash
+BASE_URL
+USERNAME
+PASSWORD
+DIR_PAIRS
+```
+
+
+国内执行
+
+```bash
+ql raw https://gitee.com/xjxjin/alist-sync/raw/main/alist-sync-ql.py
+```
+国际执行
+
+```bash
+ql raw https://github.com/xjxjin/alist-sync/raw/main/alist-sync-ql.py
+```
+<img width="1278" alt="image" src="https://github.com/xjxjin/alist-sync/assets/35513148/aad05ef8-dcfb-4d86-a12f-ebeed22d0a90">
