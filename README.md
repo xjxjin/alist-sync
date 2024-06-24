@@ -24,7 +24,7 @@
 ```bash
 BASE_URL  服务器基础URL(结尾不带/)
 USERNAME 用户名
-PASSWORDd  密码
+PASSWORD  密码
 DIR_PAIRS  源目录和目标目录的配对(源目录和目标目录的配对，用分号隔开，冒号分隔)
 CRON_SCHEDULE 调度日期，参考cron语法   "分 时 日 月 周" 非必填，不填为一次调度
 ```
