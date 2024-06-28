@@ -1,3 +1,10 @@
+"""
+任务名称
+name: Alist网盘自动同步
+定时规则
+cron: 12 3 * * *
+"""
+
 import http.client
 import json
 import re
