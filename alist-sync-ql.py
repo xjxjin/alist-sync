@@ -8,10 +8,6 @@ cron: 12 3 * * *
 import http.client
 import json
 import re
-
-# from apscheduler.schedulers.background import BackgroundScheduler
-# from apscheduler.triggers.cron import CronTrigger
-# import time
 from datetime import datetime
 import os
 
@@ -22,6 +18,7 @@ password = os.environ.get('PASSWORD')
 # dir_pairs = os.environ.get('DIR_PAIRS')
 cron_schedule = os.environ.get('CRON_SCHEDULE')
 
+
 def get_dir_pairs_from_env():
     # 初始化列表来存储环境变量的值
     dir_pairs_list = []
@@ -30,9 +27,11 @@ def get_dir_pairs_from_env():
     dir_pairs = os.environ.get('DIR_PAIRS')
 
     # 检查DIR_PAIRS是否不为空
+    print("本次同步目录有：")
     if dir_pairs:
         # 将DIR_PAIRS的值添加到列表中
         dir_pairs_list.append(dir_pairs)
+        print(dir_pairs)
 
     # 循环尝试获取DIR_PAIRS1到DIR_PAIRS50的值
     for i in range(1, 51):
@@ -43,6 +42,7 @@ def get_dir_pairs_from_env():
         # 如果环境变量的值不为空，则添加到列表中
         if env_var_value:
             dir_pairs_list.append(env_var_value)
+            print(dir_pairs)
 
     return dir_pairs_list
 
@@ -117,15 +117,18 @@ def is_directory_exists(connection, token, directory_path):
     response = directory_operation(connection, token, "get", path=directory_path)
     return response and response.get("message", "") == "success"
 
+
 def is_directory_size(connection, token, directory_path):
     # 判断文件大小
     response = directory_operation(connection, token, "get", path=directory_path)
-    return  response["data"]["size"]
+    return response["data"]["size"]
+
 
 def directory_remove(connection, token, directory_path):
     # 删除文件
     response = directory_operation(connection, token, "remove", path=directory_path)
     return response and response.get("message", "") == "success"
+
 
 def recursive_copy(src_dir, dst_dir, connection, token):
     # 递归复制文件夹内容
@@ -167,7 +170,7 @@ def recursive_copy(src_dir, dst_dir, connection, token):
 
 
 def xiaojin():
-    pt="""
+    pt = """
     
                                    ..
                                   ....                       
@@ -201,6 +204,7 @@ def xiaojin():
     """
     print(pt)
 
+
 def main():
     xiaojin()
     print(f"同步任务运行开始 {datetime.now()}")
@@ -230,7 +234,6 @@ def main():
 
     conn.close()
     print(f"同步任务运行结束 {datetime.now()}")
-
 
 
 if __name__ == '__main__':

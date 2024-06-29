@@ -28,6 +28,7 @@ PASSWORD  密码
 DIR_PAIRS  源目录和目标目录的配对(源目录和目标目录的配对，用分号隔开，冒号分隔)
 CRON_SCHEDULE 调度日期，参考cron语法   "分 时 日 月 周" 非必填，不填为一次调度
 ```
+
 ### demo
 ```bash
 docker run -d --name alist-sync \
@@ -101,3 +102,17 @@ ql raw https://gitee.com/xjxjin/alist-sync/raw/main/alist-sync-ql.py
 ql raw https://github.com/xjxjin/alist-sync/raw/main/alist-sync-ql.py
 ```
 <img width="1278" alt="image" src="https://github.com/xjxjin/alist-sync/assets/35513148/aad05ef8-dcfb-4d86-a12f-ebeed22d0a90">
+
+
+## 2024-06-29更新
+* 新增DIR_PAIRS参数个数,最多到50，参数内容和之前一致(源目录和目标目录的配对(源目录和目标目录的配对，用分号隔开，冒号分隔)),参数格式为
+```bash
+DIR_PAIRS
+DIR_PAIRS1
+DIR_PAIRS2
+DIR_PAIRS3
+.....
+DIR_PAIRS50
+```
+
+![img.png](img.png)
