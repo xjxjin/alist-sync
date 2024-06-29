@@ -19,23 +19,32 @@ import os
 base_url = os.environ.get('BASE_URL')
 username = os.environ.get('USERNAME')
 password = os.environ.get('PASSWORD')
-dir_pairs = os.environ.get('DIR_PAIRS')
+# dir_pairs = os.environ.get('DIR_PAIRS')
 cron_schedule = os.environ.get('CRON_SCHEDULE')
 
+def get_dir_pairs_from_env():
+    # 初始化列表来存储环境变量的值
+    dir_pairs_list = []
 
-# print(f'base_url={base_url}')
-# print(f'username={username}')
-# print(f'password={password}')
-print(f'dir_pairs={dir_pairs}')
-print(f'cron_schedule={cron_schedule}')
-if cron_schedule:
-    print("青龙任务，脚本内不需要定时调度")
-    # 创建一个后台调度器实例
-    # scheduler = BackgroundScheduler()
+    # 尝试从环境变量中获取DIR_PAIRS的值
+    dir_pairs = os.environ.get('DIR_PAIRS')
 
-    # 创建一个CronTrigger实例
-    # trigger = CronTrigger.from_crontab(cron_schedule)
+    # 检查DIR_PAIRS是否不为空
+    if dir_pairs:
+        # 将DIR_PAIRS的值添加到列表中
+        dir_pairs_list.append(dir_pairs)
 
+    # 循环尝试获取DIR_PAIRS1到DIR_PAIRS50的值
+    for i in range(1, 51):
+        # 构造环境变量名
+        env_var_name = f'DIR_PAIRS{i}'
+        # 尝试获取环境变量的值
+        env_var_value = os.environ.get(env_var_name)
+        # 如果环境变量的值不为空，则添加到列表中
+        if env_var_value:
+            dir_pairs_list.append(env_var_value)
+
+    return dir_pairs_list
 
 
 def create_connection(base_url):
@@ -157,22 +166,67 @@ def recursive_copy(src_dir, dst_dir, connection, token):
                     copy_item(connection, token, src_dir, dst_dir, item_name)
 
 
+def xiaojin():
+    pt="""
+    
+                                   ..
+                                  ....                       
+                               .:----=:                      
+                      ...:::---==-:::-+.                     
+                  ..:=====-=+=-::::::==               .:-.   
+              .-==*=-:::::::::::::::=*-:           .:-=++.   
+           .-==++++-::::::::::::::-++:-==:.       .=-=::=-.  
+   ....:::-=-::-++-:::::::::::::::--:::::==:      -:.:=..+:  
+  ==-------::::-==-:::::::::::::::::::::::-+-.  .=:   .:=-.. 
+  ==-::::+-:::::==-:::::::::::::::::::::::::=+.:+-    :-:    
+   :--==+*::::::-=-::::::::::::::::::::::::::-*+:    .+.     
+      ..-*:::::::==::::::::::::::::::::::::::-+.     -+.     
+        -*:::::::-=-:::::::--:::::::::::::::=-.      +-      
+        :*::::::::-=::::::-=:::::=:::::::::-:       .*.      
+        .+=:::::::::::::::-::::-*-::......::        --       
+         :+::-:::::::::::::::::*=:-::......         -.       
+          :-:-===-:::::::::::.:+==--:......        .+.       
+        .==:...-+#+::.......   .   .......         .=-       
+        -*.....::............::-.                 ...=-      
+        .==-:..       :=-::::::=.                  ..:+-     
+          .:--===---=-:::-:::--:.                   ..:+:    
+             =--+=:+*+:. ......                      ..-+.   
+            .#. .+#- .:.                             .::=:   
+             -=:.-:                                  ..::-.  
+              .-=.               xjxjin              ...:-:  
+               ...                                    ...:-  
+
+
+    
+    """
+    print(pt)
+
 def main():
+    xiaojin()
     print(f"同步任务运行开始 {datetime.now()}")
     conn = create_connection(base_url)
     token = get_token(conn, "/api/auth/login", username, password)
 
-    data_list = dir_pairs.split(';')
-    for item in data_list:
-        pair = item.split(':')
-        if len(pair) == 2:
-            src_dir, dst_dir = pair[0], pair[1]
-            if not is_directory_exists(conn, token, dst_dir):
-                create_directory(conn, token, dst_dir)
-            print(f"同步源目录: {src_dir}, 到目标目录: {dst_dir}")
-            recursive_copy(src_dir, dst_dir, conn, token)
-        else:
-            print(f"源目录或目标目录不存在: {item}")
+    dir_pairs_list = get_dir_pairs_from_env()
+    # 遍历dir_pairs_list中的每个值
+    for value in dir_pairs_list:
+        # 将当前遍历到的值赋给变量dir_pairs
+        dir_pairs = value
+        # 执行需要使用dir_pairs的代码
+        # 例如，打印dir_pairs的值
+        # print(dir_pairs)
+        data_list = dir_pairs.split(';')
+        for item in data_list:
+            pair = item.split(':')
+            if len(pair) == 2:
+                src_dir, dst_dir = pair[0], pair[1]
+                if not is_directory_exists(conn, token, dst_dir):
+                    create_directory(conn, token, dst_dir)
+                print(f"【{src_dir}】---->【 {dst_dir}】")
+                print(f"同步源目录: {src_dir}, 到目标目录: {dst_dir}")
+                recursive_copy(src_dir, dst_dir, conn, token)
+            else:
+                print(f"源目录或目标目录不存在: {item}")
 
     conn.close()
     print(f"同步任务运行结束 {datetime.now()}")
@@ -186,16 +240,3 @@ if __name__ == '__main__':
     if not cron_schedule or cron_schedule is None or cron_schedule == "None":
         print("CRON_SCHEDULE为空，将执行一次同步任务。")
         main()  # 执行一次同步任务
-    # else:
-    #     # 添加任务到调度器，使用创建的CronTrigger实例
-    #     scheduler.add_job(main, trigger=trigger)
-    #
-    #     # 开始调度器
-    #     scheduler.start()
-    #     try:
-    #         # 这会阻塞主线程，但调度器在后台线程中运行
-    #         while True:
-    #             time.sleep(1)
-    #     except (KeyboardInterrupt, SystemExit):
-    #         # 如果主线程被中断（例如用户按Ctrl+C），则关闭调度器
-    #         scheduler.shutdown()
