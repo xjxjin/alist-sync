@@ -12,8 +12,11 @@ import os
 base_url = os.environ.get('BASE_URL')
 username = os.environ.get('USERNAME')
 password = os.environ.get('PASSWORD')
-# dir_pairs = os.environ.get('DIR_PAIRS')
 cron_schedule = os.environ.get('CRON_SCHEDULE')
+
+sync_delete_action = os.environ.get('SYNC_DELETE_ACTION', 'none').lower()
+sync_delete = sync_delete_action != 'none'
+trash_folder = os.environ.get('TRASH_FOLDER', '/trash')
 
 if cron_schedule:
     # 创建一个后台调度器实例
@@ -151,10 +154,15 @@ def copy_item(connection, token, src_dir, dst_dir, item_name):
     response = directory_operation(connection, token, "copy", src_dir=src_dir, dst_dir=dst_dir, names=[item_name])
     print(f"文件【{item_name}】复制成功" if response else "文件复制失败")
 
+def move_item(connection, token, src_dir, dst_dir, item_name):
+    # 移动文件或文件夹
+    response = directory_operation(connection, token, "move", src_dir=src_dir, dst_dir=dst_dir, names=[item_name])
+    print(f"文件【{item_name}】移动成功" if response else "文件移动失败")
 
-def is_directory_exists(connection, token, directory_path):
-    # 判断文件夹是否存在
-    response = directory_operation(connection, token, "get", path=directory_path)
+
+def is_path_exists(connection, token, path):
+    # 判断路径是否存在，包括文件和文件夹
+    response = directory_operation(connection, token, "get", path=path)
     return response and response.get("message", "") == "success"
 
 
@@ -170,13 +178,18 @@ def directory_remove(connection, token, directory_path):
     return response and response.get("message", "") == "success"
 
 
-def recursive_copy(src_dir, dst_dir, connection, token):
+def recursive_copy(src_dir, dst_dir, connection, token, sync_delete=False):
     # 递归复制文件夹内容
     try:
         src_contents = get_directory_contents(connection, token, src_dir)["content"]
+        if sync_delete:
+            dst_contents = get_directory_contents(connection, token, dst_dir)["content"]
     except Exception as e:
         print(f"获取目录内容失败: {e}")
-        print(f"获取目录【 {src_dir}】failed")
+        if sync_delete:
+            print(f"获取目录【{src_dir}】或【{dst_dir}】失败")
+        else:
+            print(f"获取目录【{src_dir}】失败")
         return
     # 空目录跳过
     if not src_contents:
@@ -188,7 +201,7 @@ def recursive_copy(src_dir, dst_dir, connection, token):
         dst_item_path = f"{dst_dir}/{item_name}"
 
         if item["is_dir"]:
-            if not is_directory_exists(connection, token, dst_item_path):
+            if not is_path_exists(connection, token, dst_item_path):
                 create_directory(connection, token, dst_item_path)
             else:
                 print(f'文件夹【{dst_item_path}】已存在，跳过创建')
@@ -196,7 +209,7 @@ def recursive_copy(src_dir, dst_dir, connection, token):
             # 递归复制文件夹
             recursive_copy(item_path, dst_item_path, connection, token)
         else:
-            if not is_directory_exists(connection, token, dst_item_path):
+            if not is_path_exists(connection, token, dst_item_path):
                 copy_item(connection, token, src_dir, dst_dir, item_name)
             else:
                 src_size = item["size"]
@@ -207,7 +220,63 @@ def recursive_copy(src_dir, dst_dir, connection, token):
                     print(f'文件【{item_name}】文件存在变更，删除文件')
                     directory_remove(connection, token, dst_item_path)
                     copy_item(connection, token, src_dir, dst_dir, item_name)
+    
+    # 如果启用了同步删除，删除目标目录中不存在于源目录的文件
+    if sync_delete:
+        for dst_item in dst_contents:
+            item_name = dst_item["name"]
+            src_item_path = f"{src_dir}/{item_name}"
+            trash_dir=f"{dst_dir}{trash_folder}"
 
+            if not is_path_exists(connection, token, src_item_path):
+                dst_item_path = f"{dst_dir}/{item_name}"
+                if dst_item["is_dir"]:
+                    if sync_delete_action == "delete":
+                        directory_remove(connection, token, dst_item_path)
+                    else:
+                        recursive_move_item(connection, token, dst_item_path, trash_dir)
+                else:
+                    if sync_delete_action == "delete":
+                        directory_remove(connection, token, dst_item_path)
+                    else:
+                        # 确保目标目录存在
+                        if not is_path_exists(connection, token, dst_dir):
+                          create_directory(connection, token, dst_dir)
+                        move_item(connection, token, dst_dir, trash_dir, item_name)
+
+def recursive_move_item(connection, token, src_dir, dst_dir):
+
+    # 确保目标目录存在
+    if not is_path_exists(connection, token, dst_dir):
+      create_directory(connection, token, dst_dir)
+
+    try:
+      # 获取源项目的信息
+      src_contents = get_directory_contents(connection, token, src_dir)["content"]
+    except Exception as e:
+        print(f"获取目录内容失败: {e}")
+        print(f"获取目录【{src_dir}】失败")
+        return
+
+    # 空目录跳过
+    if not src_contents:
+        return
+
+    for item in src_contents:
+        item_name = item["name"]
+        src_item_path = f"{src_dir}/{item_name}"
+        dst_item_path = f"{dst_dir}/{item_name}"
+
+        if item["is_dir"]:
+            recursive_move_item(connection, token, src_item_path, dst_item_path)
+        else:
+            # 如果是文件,直接移动
+            move_item(connection, token, src_dir, dst_dir, item_name)
+    # 移动完所有子项目后,删除源目录
+    directory_remove(connection, token, src_dir)
+
+    print(f"已移动 {src_dir} 到 {dst_dir}")
+        
 
 def main():
     xiaojin()
@@ -228,11 +297,11 @@ def main():
             pair = item.split(':')
             if len(pair) == 2:
                 src_dir, dst_dir = pair[0], pair[1]
-                if not is_directory_exists(conn, token, dst_dir):
+                if not is_path_exists(conn, token, dst_dir):
                     create_directory(conn, token, dst_dir)
                 print(f"【{src_dir}】---->【 {dst_dir}】")
                 print(f"同步源目录: {src_dir}, 到目标目录: {dst_dir}")
-                recursive_copy(src_dir, dst_dir, conn, token)
+                recursive_copy(src_dir, dst_dir, conn, token, sync_delete)
             else:
                 print(f"源目录或目标目录不存在: {item}")
 
