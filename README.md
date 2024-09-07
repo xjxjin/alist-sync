@@ -27,7 +27,7 @@ USERNAME 用户名
 PASSWORD  密码
 DIR_PAIRS  源目录和目标目录的配对(源目录和目标目录的配对，用分号隔开，冒号分隔)
 CRON_SCHEDULE 调度日期，参考cron语法   "分 时 日 月 周" 非必填，不填为一次调度
---以下参数目前不支持青龙--
+--以下参数用于目标目录有，但源目录不存在的文件处理，可选参数--
 SYNC_DELETE_ACTION 同步删除动作,默认为none什么也不做，可选值为none,move,delete。
 TRASH_FOLDER 当SYNC_DELETE_ACTION设置为move时，此参数生效。它指定一个目录，用于存放那些已从源目录同步到目标目录，但随后在源目录中被删除的文件。这样可以避免直接删除文件，而是将它们移动到一个指定的"回收站"目录中。(以/开头，结尾不带/)
 ```
@@ -80,11 +80,22 @@ services:
 <img width="1628" alt="image" src="https://github.com/xjxjin/alist-sync/assets/35513148/f2b907a2-8d84-4b01-a748-8d08e570af5e">
 
 
-## 2024-09-6更新
-### 1.新增文件同步删除，并且提供两种方式
+## 2024-09-06更新
+### 1.新增参数，处理目标目录有多的文件或者文件夹，但是源目录没有的处理方式,功能由【[RWDai](https://github.com/RWDai)】小哥提供
  * none 什么也不做
- * move 移动到trash目录
+ * move 移动到目标目录下的trash目录
  * delete 真实删除
+![img_1.png](img_1.png)
+
+* 移动之前源目录
+![img_4.png](img_4.png)
+
+* 移动之前目标目录
+![img_3.png](img_3.png)
+
+* 移动之后目标目录
+![img_2.png](img_2.png)
+
 
 ## 2024-05-13更新
 ### 1.新增文件存在判断逻辑  
