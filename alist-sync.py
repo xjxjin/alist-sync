@@ -154,6 +154,7 @@ def copy_item(connection, token, src_dir, dst_dir, item_name):
     response = directory_operation(connection, token, "copy", src_dir=src_dir, dst_dir=dst_dir, names=[item_name])
     print(f"文件【{item_name}】复制成功" if response else "文件复制失败")
 
+
 def move_item(connection, token, src_dir, dst_dir, item_name):
     # 移动文件或文件夹
     response = directory_operation(connection, token, "move", src_dir=src_dir, dst_dir=dst_dir, names=[item_name])
@@ -207,7 +208,7 @@ def recursive_copy(src_dir, dst_dir, connection, token, sync_delete=False):
                 print(f'文件夹【{dst_item_path}】已存在，跳过创建')
 
             # 递归复制文件夹
-            recursive_copy(item_path, dst_item_path, connection, token)
+            recursive_copy(item_path, dst_item_path, connection, token, sync_delete)
         else:
             if not is_path_exists(connection, token, dst_item_path):
                 copy_item(connection, token, src_dir, dst_dir, item_name)
@@ -220,13 +221,13 @@ def recursive_copy(src_dir, dst_dir, connection, token, sync_delete=False):
                     print(f'文件【{item_name}】文件存在变更，删除文件')
                     directory_remove(connection, token, dst_item_path)
                     copy_item(connection, token, src_dir, dst_dir, item_name)
-    
+
     # 如果启用了同步删除，删除目标目录中不存在于源目录的文件
     if sync_delete:
         for dst_item in dst_contents:
             item_name = dst_item["name"]
             src_item_path = f"{src_dir}/{item_name}"
-            trash_dir=f"{dst_dir}{trash_folder}"
+            trash_dir = f"{dst_dir}{trash_folder}"
 
             if not is_path_exists(connection, token, src_item_path):
                 dst_item_path = f"{dst_dir}/{item_name}"
@@ -240,19 +241,19 @@ def recursive_copy(src_dir, dst_dir, connection, token, sync_delete=False):
                         directory_remove(connection, token, dst_item_path)
                     else:
                         # 确保目标目录存在
-                        if not is_path_exists(connection, token, dst_dir):
-                          create_directory(connection, token, dst_dir)
+                        if not is_path_exists(connection, token, trash_dir):
+                            create_directory(connection, token, trash_dir)
                         move_item(connection, token, dst_dir, trash_dir, item_name)
 
-def recursive_move_item(connection, token, src_dir, dst_dir):
 
+def recursive_move_item(connection, token, src_dir, dst_dir):
     # 确保目标目录存在
     if not is_path_exists(connection, token, dst_dir):
-      create_directory(connection, token, dst_dir)
+        create_directory(connection, token, dst_dir)
 
     try:
-      # 获取源项目的信息
-      src_contents = get_directory_contents(connection, token, src_dir)["content"]
+        # 获取源项目的信息
+        src_contents = get_directory_contents(connection, token, src_dir)["content"]
     except Exception as e:
         print(f"获取目录内容失败: {e}")
         print(f"获取目录【{src_dir}】失败")
@@ -276,7 +277,7 @@ def recursive_move_item(connection, token, src_dir, dst_dir):
     directory_remove(connection, token, src_dir)
 
     print(f"已移动 {src_dir} 到 {dst_dir}")
-        
+
 
 def main():
     xiaojin()
