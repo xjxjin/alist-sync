@@ -75,6 +75,30 @@ services:
 ### 注意 DIR_PAIRS格式为  ，用分号隔开，冒号分隔，英文冒号，英文分号
 
 
+### 青龙
+需要在环境变量处设置参数
+
+```bash
+BASE_URL
+USERNAME
+PASSWORD
+DIR_PAIRS
+SYNC_DELETE_ACTION
+TRASH_FOLDER
+```
+
+
+国内执行
+
+```bash
+ql raw https://gitee.com/xjxjin/alist-sync/raw/main/alist-sync-ql.py
+```
+国际执行
+
+```bash
+ql raw https://github.com/xjxjin/alist-sync/raw/main/alist-sync-ql.py
+```
+![img_1.png](img_1.png)
 
 ## 执行完成后可以在复制页面查看进度
 <img width="1628" alt="image" src="https://github.com/xjxjin/alist-sync/assets/35513148/f2b907a2-8d84-4b01-a748-8d08e570af5e">
@@ -85,7 +109,7 @@ services:
  * none 什么也不做
  * move 移动到目标目录下的trash目录
  * delete 真实删除
-![img_1.png](img_1.png)
+
 
 * 移动之前源目录
 ![img_4.png](img_4.png)
@@ -106,28 +130,6 @@ services:
 
 ## 2024-05-23更新
 * 新增青龙调度
-
-需要在环境变量处设置参数
-
-```bash
-BASE_URL
-USERNAME
-PASSWORD
-DIR_PAIRS
-```
-
-
-国内执行
-
-```bash
-ql raw https://gitee.com/xjxjin/alist-sync/raw/main/alist-sync-ql.py
-```
-国际执行
-
-```bash
-ql raw https://github.com/xjxjin/alist-sync/raw/main/alist-sync-ql.py
-```
-<img width="1278" alt="image" src="https://github.com/xjxjin/alist-sync/assets/35513148/aad05ef8-dcfb-4d86-a12f-ebeed22d0a90">
 
 
 ## 2024-06-29更新
