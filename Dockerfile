@@ -19,7 +19,7 @@ ENV PASSWORD=""
 ENV DIR_PAIRS=""
 ENV CRON_SCHEDULE=""
 ENV SYNC_DELETE_ACTION="none"
-ENV TRASH_FOLDER=""
+ENV TRASH_FOLDER="/trash"
 
 # 启动服务
 # CMD ["python", "./alist-sync.py", "--base_url", "$BASE_URL", "--username", "$USERNAME", "--password", "$PASSWORD", "--dir_pairs", "$DIR_PAIRS", "--cron_schedule", "$CRON_SCHEDULE"]
