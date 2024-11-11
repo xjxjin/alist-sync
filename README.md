@@ -108,7 +108,7 @@ ql raw https://github.com/xjxjin/alist-sync/raw/main/alist-sync-ql.py
 ### 1.新增参数，处理目标目录有多的文件或者文件夹，但是源目录没有的处理方式,功能由【[RWDai](https://github.com/RWDai)】小哥提供
  * none 什么也不做
  * move 移动到目标目录下的trash目录
- * delete 真实删除
+ * delete 真实删除 
 
 
 * 移动之前源目录
