@@ -28,8 +28,9 @@ PASSWORD  密码
 DIR_PAIRS  源目录和目标目录的配对(源目录和目标目录的配对，用分号隔开，冒号分隔)
 CRON_SCHEDULE 调度日期，参考cron语法   "分 时 日 月 周" 非必填，不填为一次调度
 --以下参数用于目标目录有，但源目录不存在的文件处理，可选参数--
-SYNC_DELETE_ACTION 同步删除动作,默认为none什么也不做，可选值为none,move,delete。
-TRASH_FOLDER 当SYNC_DELETE_ACTION设置为move时，此参数生效。它指定一个目录，用于存放那些已从源目录同步到目标目录，但随后在源目录中被删除的文件。这样可以避免直接删除文件，而是将它们移动到一个指定的"回收站"目录中。(以/开头，结尾不带/)
+SYNC_DELETE_ACTION 同步删除动作，可选值为move,delete。
+当SYNC_DELETE_ACTION设置为move时，文件将移动到trash目录下；比如存储器目录为 /dav/quark，则源目录多余的文件将会移动到/dav/quark/trash 目录下
+
 ```
 
 ### demo
