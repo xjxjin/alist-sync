@@ -43,7 +43,6 @@ docker run -d --name alist-sync \
 -e DIR_PAIRS=/dav/aliyundrive/同步目录/工作:/dav/quark/同步目录1/工作;/dav/quark/同步目录1/工作:/dav/aliyundrive/同步目录/工作 \
 -e "CRON_SCHEDULE=5 16 * * *" \
 -e SYNC_DELETE_ACTION=move \
--e TRASH_FOLDER=/trash \
 xjxjin/alist-sync:latest
 ```
 
@@ -62,7 +61,6 @@ services:
             - DIR_PAIRS=/dav/aliyundrive/同步目录/工作:/dav/quark/同步目录1/工作;/dav/quark/同步目录1/工作:/dav/aliyundrive/同步目录/工作
             - CRON_SCHEDULE=5 16 * * *
             - SYNC_DELETE_ACTION=move
-            - TRASH_FOLDER=/trash
         image: xjxjin/alist-sync:latest
 ```
 
@@ -85,7 +83,6 @@ USERNAME
 PASSWORD
 DIR_PAIRS
 SYNC_DELETE_ACTION
-TRASH_FOLDER
 ```
 
 
@@ -103,6 +100,13 @@ ql raw https://github.com/xjxjin/alist-sync/raw/main/alist-sync-ql.py
 
 ## 执行完成后可以在复制页面查看进度
 <img width="1628" alt="image" src="https://github.com/xjxjin/alist-sync/assets/35513148/f2b907a2-8d84-4b01-a748-8d08e570af5e">
+
+## 2024-11-13更新
+### 1.修复bug
+ * 修复删除目标目录多余文件重复删除问题
+ * 优化移动目标目录多余文件到存储器根目录
+### 2.优化功能
+ * 优化设置多目录，一个目录失败导致所有目录失败问题
 
 
 ## 2024-09-06更新
