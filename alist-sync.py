@@ -69,11 +69,11 @@ def get_dir_pairs_from_env():
     dir_pairs = os.environ.get('DIR_PAIRS')
 
     # 检查DIR_PAIRS是否不为空
-    print("本次同步目录有：")
+    # print("本次同步目录有：")
     if dir_pairs:
         # 将DIR_PAIRS的值添加到列表中
         dir_pairs_list.append(dir_pairs)
-        print(dir_pairs)
+        # print(dir_pairs)
 
     # 循环尝试获取DIR_PAIRS1到DIR_PAIRS50的值
     for i in range(1, 51):
@@ -84,7 +84,7 @@ def get_dir_pairs_from_env():
         # 如果环境变量的值不为空，则添加到列表中
         if env_var_value:
             dir_pairs_list.append(env_var_value)
-            print(dir_pairs)
+            # print(dir_pairs)
 
     return dir_pairs_list
 
@@ -172,15 +172,15 @@ def is_directory_size(connection, token, directory_path):
     return response["data"]["size"]
 
 
-def directory_remove(connection, token, directory_path):
+def directory_remove(connection, token, directory_path, file_name):
     # 删除文件
-    response = directory_operation(connection, token, "remove", path=directory_path)
-    print(f"文件【{directory_path}】删除成功" if response else "文件删除失败")
+    response = directory_operation(connection, token, "remove", dir=directory_path, names=[file_name])
+    print(f"文件【{directory_path}/{file_name}】删除成功" if response.get("message",
+                                                                        "") == "success" else f"文件【{directory_path}/{file_name}】删除失败")
 
 
 def get_storage_list(connection, token):
-    # (connection, token, "mkdir", directory_path, path=directory_path)
-    # 一个通用函数，用于执行目录操作
+    # 列出存储列表
     headers = {
         'Authorization': token,
         'User-Agent': 'Apifox/1.0.0 (https://apifox.com)',
@@ -226,11 +226,8 @@ def recursive_copy(src_dir, dst_dir, connection, token, sync_delete=False):
         if len(diff_list) > 0:
             for dst_item in dst_contents:
                 item_name = dst_item["name"]
-                # trash_dir = f"{trash_folder}/{dst_dir}"
 
                 if item_name in diff_list:
-                    # 拼接删除文件路径
-                    dst_remove_path = f"{dst_dir}/{item_name}"
                     # 如果是移动判断源文件夹是否存在
                     if sync_delete_action == 'move':
                         # 拼接移动文件路径
@@ -249,7 +246,7 @@ def recursive_copy(src_dir, dst_dir, connection, token, sync_delete=False):
                         move_item(connection, token, dst_dir, trash_dir, item_name)
 
                     if sync_delete_action == 'delete':
-                        directory_remove(connection, token, dst_remove_path)
+                        directory_remove(connection, token, dst_dir, item_name)
 
     # 开始复制文件操作
     for item in src_contents:
@@ -276,7 +273,7 @@ def recursive_copy(src_dir, dst_dir, connection, token, sync_delete=False):
                     print(f'文件【{item_name}】已存在，跳过复制')
                 else:
                     print(f'文件【{item_name}】文件存在变更，删除文件')
-                    directory_remove(connection, token, dst_item_path)
+                    directory_remove(connection, token, dst_dir, item_name)
                     copy_item(connection, token, src_dir, dst_dir, item_name)
 
 

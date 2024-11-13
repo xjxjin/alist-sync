@@ -11,8 +11,8 @@ password = os.environ.get('PASSWORD')
 cron_schedule = os.environ.get('CRON_SCHEDULE')
 
 sync_delete_action = os.environ.get('SYNC_DELETE_ACTION', 'none').lower()
-sync_delete = sync_delete_action != 'none'
-trash_folder = os.environ.get('TRASH_FOLDER', '/trash')
+sync_delete = sync_delete_action == 'move' or sync_delete_action == 'delete'
+
 
 def xiaojin():
     pt = """
@@ -58,7 +58,7 @@ def get_dir_pairs_from_env():
     dir_pairs = os.environ.get('DIR_PAIRS')
 
     # 检查DIR_PAIRS是否不为空
-    print("本次同步目录有：")
+    # print("本次同步目录有：")
     if dir_pairs:
         # 将DIR_PAIRS的值添加到列表中
         dir_pairs_list.append(dir_pairs)
@@ -73,7 +73,7 @@ def get_dir_pairs_from_env():
         # 如果环境变量的值不为空，则添加到列表中
         if env_var_value:
             dir_pairs_list.append(env_var_value)
-            print(dir_pairs)
+            # print(dir_pairs)
 
     return dir_pairs_list
 
@@ -142,10 +142,11 @@ def copy_item(connection, token, src_dir, dst_dir, item_name):
     response = directory_operation(connection, token, "copy", src_dir=src_dir, dst_dir=dst_dir, names=[item_name])
     print(f"文件【{item_name}】复制成功" if response else "文件复制失败")
 
+
 def move_item(connection, token, src_dir, dst_dir, item_name):
     # 移动文件或文件夹
     response = directory_operation(connection, token, "move", src_dir=src_dir, dst_dir=dst_dir, names=[item_name])
-    print(f"文件【{item_name}】移动成功" if response else "文件移动失败")
+    print(f"文件从【{src_dir}/{item_name}】移动到【{dst_dir}/{item_name}】移动成功" if response else "文件移动失败")
 
 
 def is_path_exists(connection, token, path):
@@ -160,34 +161,89 @@ def is_directory_size(connection, token, directory_path):
     return response["data"]["size"]
 
 
-def directory_remove(connection, token, directory_path):
+def directory_remove(connection, token, directory_path, file_name):
     # 删除文件
-    response = directory_operation(connection, token, "remove", path=directory_path)
-    return response and response.get("message", "") == "success"
+    response = directory_operation(connection, token, "remove", dir=directory_path, names=[file_name])
+    print(f"文件【{directory_path}/{file_name}】删除成功" if response.get("message",
+                                                                        "") == "success" else f"文件【{directory_path}/{file_name}】删除失败")
+
+
+def get_storage_list(connection, token):
+    # 列出存储列表
+    headers = {
+        'Authorization': token,
+        'User-Agent': 'Apifox/1.0.0 (https://apifox.com)',
+        'Content-Type': 'application/json'
+    }
+    response = make_request(connection, "GET", "/api/admin/storage/list", headers)
+    storage_list = response["data"]["content"]
+    return [list["mount_path"] for list in storage_list] if response else None
 
 
 def recursive_copy(src_dir, dst_dir, connection, token, sync_delete=False):
     # 递归复制文件夹内容
+    global dst_contents
     try:
         src_contents = get_directory_contents(connection, token, src_dir)["content"]
-        if sync_delete:
-            dst_contents = get_directory_contents(connection, token, dst_dir)["content"]
     except Exception as e:
-        print(f"获取目录内容失败: {e}")
-        if sync_delete:
-            print(f"获取目录【{src_dir}】或【{dst_dir}】失败")
-        else:
-            print(f"获取目录【{src_dir}】失败")
+        print(f"获取目录【{src_dir}】失败: {e}")
         return
     # 空目录跳过
     if not src_contents:
         return
 
+    # 因为开启了递归，所以需要先判断源目录是否存在多余文件，来确定是否移动或者删除文件
+    # 如果启用了同步删除，删除目标目录中不存在于源目录的文件
+    if sync_delete:
+        dst_list = []
+        try:
+            dst_contents = get_directory_contents(connection, token, dst_dir)["content"]
+            for dst_item in dst_contents:
+                item_name = dst_item["name"]
+                dst_list.append(item_name)
+        except Exception as e:
+            print(f"获取目录【{dst_dir}】失败: {e}")
+
+        src_list = []
+        for item in src_contents:
+            item_name = item["name"]
+            # 添加源目录下文件名称
+            src_list.append(item_name)
+
+        # 获取目标目录有的文件，但是源目录没有的文件
+        diff_list = list(set(dst_list) - set(src_list))
+        if len(diff_list) > 0:
+            for dst_item in dst_contents:
+                item_name = dst_item["name"]
+
+                if item_name in diff_list:
+                    # 如果是移动判断源文件夹是否存在
+                    if sync_delete_action == 'move':
+                        # 拼接移动文件路径
+                        # 拼接到目标目录的trash下，获取文件夹所在的存储路径名称,拼接移动文件路径
+                        trash_dir = ""
+                        storage_list = get_storage_list(connection, token)
+                        for mount_path in storage_list:
+                            if dst_dir.startswith(mount_path):
+                                c = dst_dir[len(mount_path):]
+                                trash_dir = f"{mount_path}/trash{c}"
+                                break
+
+                        # 判断文件夹是否存在，不存在就创建文件夹
+                        if not is_path_exists(connection, token, trash_dir):
+                            create_directory(connection, token, trash_dir)
+                        move_item(connection, token, dst_dir, trash_dir, item_name)
+
+                    if sync_delete_action == 'delete':
+                        directory_remove(connection, token, dst_dir, item_name)
+
+    # 开始复制文件操作
     for item in src_contents:
         item_name = item["name"]
         item_path = f"{src_dir}/{item_name}"
         dst_item_path = f"{dst_dir}/{item_name}"
 
+        # 添加源目录下文件名称
         if item["is_dir"]:
             if not is_path_exists(connection, token, dst_item_path):
                 create_directory(connection, token, dst_item_path)
@@ -206,65 +262,8 @@ def recursive_copy(src_dir, dst_dir, connection, token, sync_delete=False):
                     print(f'文件【{item_name}】已存在，跳过复制')
                 else:
                     print(f'文件【{item_name}】文件存在变更，删除文件')
-                    directory_remove(connection, token, dst_item_path)
+                    directory_remove(connection, token, dst_dir, item_name)
                     copy_item(connection, token, src_dir, dst_dir, item_name)
-
-    # 如果启用了同步删除，删除目标目录中不存在于源目录的文件
-    if sync_delete:
-        for dst_item in dst_contents:
-            item_name = dst_item["name"]
-            src_item_path = f"{src_dir}/{item_name}"
-            trash_dir=f"{dst_dir}{trash_folder}"
-
-            if not is_path_exists(connection, token, src_item_path):
-                dst_item_path = f"{dst_dir}/{item_name}"
-                if dst_item["is_dir"]:
-                    if sync_delete_action == "delete":
-                        directory_remove(connection, token, dst_item_path)
-                    else:
-                        recursive_move_item(connection, token, dst_item_path, trash_dir)
-                else:
-                    if sync_delete_action == "delete":
-                        directory_remove(connection, token, dst_item_path)
-                    else:
-                        # 确保目标目录存在
-                        if not is_path_exists(connection, token, trash_dir):
-                          create_directory(connection, token, trash_dir)
-                        move_item(connection, token, dst_dir, trash_dir, item_name)
-
-def recursive_move_item(connection, token, src_dir, dst_dir):
-
-    # 确保目标目录存在
-    if not is_path_exists(connection, token, dst_dir):
-      create_directory(connection, token, dst_dir)
-
-    try:
-      # 获取源项目的信息
-      src_contents = get_directory_contents(connection, token, src_dir)["content"]
-    except Exception as e:
-        print(f"获取目录内容失败: {e}")
-        print(f"获取目录【{src_dir}】失败")
-        return
-
-    # 空目录跳过
-    if not src_contents:
-        return
-
-    for item in src_contents:
-        item_name = item["name"]
-        src_item_path = f"{src_dir}/{item_name}"
-        dst_item_path = f"{dst_dir}/{item_name}"
-
-        if item["is_dir"]:
-            recursive_move_item(connection, token, src_item_path, dst_item_path)
-        else:
-            # 如果是文件,直接移动
-            move_item(connection, token, src_dir, dst_dir, item_name)
-    # 移动完所有子项目后,删除源目录
-    directory_remove(connection, token, src_dir)
-
-    print(f"已移动 {src_dir} 到 {dst_dir}")
-
 
 
 def main():
