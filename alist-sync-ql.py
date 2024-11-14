@@ -3,9 +3,15 @@ import json
 import re
 from datetime import datetime
 import os
+import logging
+
+# 配置日志记录器
+logging.basicConfig(level=logging.INFO,
+                    format='%(asctime)s - %(levelname)s - %(message)s',
+                    datefmt='%Y-%m-%d %H:%M:%S')
+logger = logging.getLogger(__name__)
 
 # 解析命令行参数
-
 base_url = os.environ.get("BASE_URL")
 username = os.environ.get("USERNAME")
 password = os.environ.get("PASSWORD")
@@ -48,8 +54,7 @@ def xiaojin():
 
 
     """
-    print(pt)
-
+    logger.info(pt)
 
 def get_dir_pairs_from_env():
     # 初始化列表来存储环境变量的值
@@ -57,13 +62,14 @@ def get_dir_pairs_from_env():
 
     # 尝试从环境变量中获取DIR_PAIRS的值
     dir_pairs = os.environ.get("DIR_PAIRS")
-
+    # logger.info(f"本次同步的目录有")
     # 检查DIR_PAIRS是否不为空
-    # print("本次同步目录有：")
+    logger.info("本次同步目录有：")
     if dir_pairs:
         # 将DIR_PAIRS的值添加到列表中
         dir_pairs_list.append(dir_pairs)
-        # print(dir_pairs)
+        logger.info(f"【{dir_pairs}】")
+
 
     # 循环尝试获取DIR_PAIRS1到DIR_PAIRS50的值
     for i in range(1, 51):
@@ -74,7 +80,7 @@ def get_dir_pairs_from_env():
         # 如果环境变量的值不为空，则添加到列表中
         if env_var_value:
             dir_pairs_list.append(env_var_value)
-            # print(dir_pairs)
+            logger.info(f"【{env_var_value}】")
 
     return dir_pairs_list
 
@@ -98,7 +104,7 @@ def make_request(connection, method, path, headers=None, payload=None):
         response = connection.getresponse()
         return json.loads(response.read().decode("utf-8"))
     except Exception as e:
-        print(f"请求失败: {e}")
+        logger.error(f"请求失败: {e}")
         return None
 
 
@@ -110,7 +116,11 @@ def get_token(connection, path, username, password):
         "Content-Type": "application/json"
     }
     response = make_request(connection, "POST", path, headers, payload)
-    return response["data"]["token"] if response else None
+    if response:
+        return response["data"]["token"]
+    else:
+        logger.error("获取token失败")
+        return None
 
 
 def directory_operation(connection, token, operation, **kwargs):
@@ -135,19 +145,28 @@ def get_directory_contents(connection, token, directory_path):
 def create_directory(connection, token, directory_path):
     # 创建新文件夹
     response = directory_operation(connection, token, "mkdir", path=directory_path)
-    print(f"文件夹【{directory_path}】创建成功" if response else "文件夹创建失败")
+    if response:
+        logger.info(f"文件夹【{directory_path}】创建成功")
+    else:
+        logger.error("文件夹创建失败")
 
 
 def copy_item(connection, token, src_dir, dst_dir, item_name):
     # 复制文件或文件夹
     response = directory_operation(connection, token, "copy", src_dir=src_dir, dst_dir=dst_dir, names=[item_name])
-    print(f"文件【{item_name}】复制成功" if response else "文件复制失败")
+    if response:
+        logger.info(f"文件【{item_name}】复制成功")
+    else:
+        logger.error("文件复制失败")
 
 
 def move_item(connection, token, src_dir, dst_dir, item_name):
     # 移动文件或文件夹
     response = directory_operation(connection, token, "move", src_dir=src_dir, dst_dir=dst_dir, names=[item_name])
-    print(f"文件从【{src_dir}/{item_name}】移动到【{dst_dir}/{item_name}】移动成功" if response else "文件移动失败")
+    if response:
+        logger.info(f"文件从【{src_dir}/{item_name}】移动到【{dst_dir}/{item_name}】移动成功")
+    else:
+        logger.error("文件移动失败")
 
 
 def is_path_exists(connection, token, path):
@@ -165,8 +184,10 @@ def is_directory_size(connection, token, directory_path):
 def directory_remove(connection, token, directory_path, file_name):
     # 删除文件
     response = directory_operation(connection, token, "remove", dir=directory_path, names=[file_name])
-    print(f"文件【{directory_path}/{file_name}】删除成功" if response.get("message",
-                                                                        "") == "success" else f"文件【{directory_path}/{file_name}】删除失败")
+    if response.get("message", "") == "success":
+        logger.info(f"文件【{directory_path}/{file_name}】删除成功")
+    else:
+        logger.error(f"文件【{directory_path}/{file_name}】删除失败")
 
 
 def get_storage_list(connection, token):
@@ -177,8 +198,12 @@ def get_storage_list(connection, token):
         "Content-Type": "application/json"
     }
     response = make_request(connection, "GET", "/api/admin/storage/list", headers)
-    storage_list = response["data"]["content"]
-    return [list["mount_path"] for list in storage_list] if response else None
+    if response:
+        storage_list = response["data"]["content"]
+        return [list["mount_path"] for list in storage_list]
+    else:
+        logger.error("获取存储列表失败")
+        return None
 
 
 def recursive_copy(src_dir, dst_dir, connection, token, sync_delete=False):
@@ -187,7 +212,7 @@ def recursive_copy(src_dir, dst_dir, connection, token, sync_delete=False):
     try:
         src_contents = get_directory_contents(connection, token, src_dir)["content"]
     except Exception as e:
-        print(f"获取目录【{src_dir}】失败: {e}")
+        logger.error(f"获取目录【{src_dir}】失败: {e}")
         return
     # 空目录跳过
     if not src_contents:
@@ -203,7 +228,7 @@ def recursive_copy(src_dir, dst_dir, connection, token, sync_delete=False):
                 item_name = dst_item["name"]
                 dst_list.append(item_name)
         except Exception as e:
-            print(f"获取目录【{dst_dir}】失败: {e}")
+            logger.error(f"获取目录【{dst_dir}】失败: {e}")
 
         src_list = []
         for item in src_contents:
@@ -249,7 +274,7 @@ def recursive_copy(src_dir, dst_dir, connection, token, sync_delete=False):
             if not is_path_exists(connection, token, dst_item_path):
                 create_directory(connection, token, dst_item_path)
             else:
-                print(f"文件夹【{dst_item_path}】已存在，跳过创建")
+                logger.info(f"文件夹【{dst_item_path}】已存在，跳过创建")
 
             # 递归复制文件夹
             recursive_copy(item_path, dst_item_path, connection, token, sync_delete)
@@ -259,52 +284,78 @@ def recursive_copy(src_dir, dst_dir, connection, token, sync_delete=False):
             else:
                 src_size = item["size"]
                 dst_size = is_directory_size(connection, token, dst_item_path)
-                if src_size == dst_size:
-                    print(f"文件【{item_name}】已存在，跳过复制")
-                else:
-                    print(f"文件【{item_name}】文件存在变更，删除文件")
-                    directory_remove(connection, token, dst_dir, item_name)
-                    copy_item(connection, token, src_dir, dst_dir, item_name)
+            if src_size == dst_size:
+                logger.info(f"文件【{item_name}】已存在，跳过复制")
+            else:
+                logger.info(f"文件【{item_name}】文件存在变更，删除文件")
+                directory_remove(connection, token, dst_dir, item_name)
+                copy_item(connection, token, src_dir, dst_dir, item_name)
 
 
 def main():
     xiaojin()
-    print(f"同步任务运行开始 {datetime.now()}")
+    logger.info(f"同步任务运行开始 {datetime.now()}")
     conn = create_connection(base_url)
     token = get_token(conn, "/api/auth/login", username, password)
 
     dir_pairs_list = get_dir_pairs_from_env()
+    i = 0
     # 遍历dir_pairs_list中的每个值
     for value in dir_pairs_list:
         # 将当前遍历到的值赋给变量dir_pairs
         dir_pairs = value
         # 执行需要使用dir_pairs的代码
         # 例如，打印dir_pairs的值
-        # print(dir_pairs)
+        # logger.info(dir_pairs)
+
         data_list = dir_pairs.split(";")
+
         for item in data_list:
+            i = i + 1
             pair = item.split(":")
             try:
                 if len(pair) == 2:
                     src_dir, dst_dir = pair[0], pair[1]
+                    logger.info(f"")
+                    logger.info(f"")
+                    logger.info(f"")
+                    logger.info(f"")
+                    logger.info(f"")
+                    logger.info(f"第 [{i}] 个 同步目录【{src_dir}】---->【 {dst_dir}】")
+                    logger.info(f"")
+                    logger.info(f"")
                     if not is_path_exists(conn, token, dst_dir):
                         create_directory(conn, token, dst_dir)
-                    print(f"【{src_dir}】---->【 {dst_dir}】")
-                    print(f"同步源目录: {src_dir}, 到目标目录: {dst_dir}")
+
+                    # logger.info(f"同步源目录: {src_dir}, 到目标目录: {dst_dir}")
                     recursive_copy(src_dir, dst_dir, conn, token, sync_delete)
+
                 else:
-                    print(f"源目录或目标目录不存在: {item}")
+                    logger.error(f"源目录或目标目录不存在: {item}")
             except Exception as e:
-                print(f"同步目录【{item}】失败: {e}")
+                logger.error(f"同步目录【{item}】失败: {e}")
 
     conn.close()
-    print(f"同步任务运行结束 {datetime.now()}")
+    logger.info(f"同步任务运行结束 {datetime.now()}")
 
 
 if __name__ == '__main__':
-    # ... 解析命令行参数 ...
+    # ... 解析命令行参数...
 
     # 检查CRON_SCHEDULE是否为空或者为null
     if not cron_schedule or cron_schedule is None or cron_schedule == "None":
-        print("CRON_SCHEDULE为空，将执行一次同步任务。")
+        # logger.info("CRON_SCHEDULE为空，将执行一次同步任务。")
         main()  # 执行一次同步任务
+    else:
+        # 添加任务到调度器，使用创建的CronTrigger实例
+        scheduler.add_job(main, trigger=trigger)
+
+        # 开始调度器
+        scheduler.start()
+        try:
+            # 这会阻塞主线程，但调度器在后台线程中运行
+            while True:
+                time.sleep(1)
+        except (KeyboardInterrupt, SystemExit):
+            # 如果主线程被中断（例如用户按Ctrl+C），则关闭调度器
+            scheduler.shutdown()
