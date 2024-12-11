@@ -65,11 +65,12 @@ def get_dir_pairs_from_env():
     # logger.info(f"本次同步的目录有")
     # 检查DIR_PAIRS是否不为空
     logger.info("本次同步目录有：")
+    num=1
     if dir_pairs:
         # 将DIR_PAIRS的值添加到列表中
         dir_pairs_list.append(dir_pairs)
-        logger.info(f"【{dir_pairs}】")
-
+        logger.info(f"No.{num:02d}【{dir_pairs}】")
+        num += 1
 
     # 循环尝试获取DIR_PAIRS1到DIR_PAIRS50的值
     for i in range(1, 51):
@@ -80,7 +81,9 @@ def get_dir_pairs_from_env():
         # 如果环境变量的值不为空，则添加到列表中
         if env_var_value:
             dir_pairs_list.append(env_var_value)
-            logger.info(f"【{env_var_value}】")
+            logger.info(f"No.{num:02d}【{env_var_value}】")
+            num += 1
+          
 
     return dir_pairs_list
 
