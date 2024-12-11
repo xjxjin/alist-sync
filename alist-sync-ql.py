@@ -288,14 +288,12 @@ def recursive_copy(src_dir, dst_dir, connection, token, sync_delete=False):
             else:
                 src_size = item["size"]
                 dst_size = is_directory_size(connection, token, dst_item_path)
-                size_info['src_size'] = src_size
-                size_info['dst_size'] = dst_size
-            if size_info.get('src_size') == size_info.get('dst_size'):
-                logger.info(f"文件【{item_name}】已存在，跳过复制")
-            else:
-                logger.info(f"文件【{item_name}】文件存在变更，删除文件")
-                directory_remove(connection, token, dst_dir, item_name)
-                copy_item(connection, token, src_dir, dst_dir, item_name)
+                if src_size == dst_size:
+                    logger.info(f"文件【{item_name}】已存在，跳过复制")
+                else:
+                    logger.info(f"文件【{item_name}】文件存在变更，删除文件")
+                    directory_remove(connection, token, dst_dir, item_name)
+                    copy_item(connection, token, src_dir, dst_dir, item_name)
 
 
 def main():
@@ -327,7 +325,7 @@ def main():
                     logger.info(f"")
                     logger.info(f"")
                     logger.info(f"")
-                    logger.info(f"第 [{i}] 个 同步目录【{src_dir}】---->【 {dst_dir}】")
+                    logger.info(f"第 [{i:02d}] 个 同步目录【{src_dir}】---->【 {dst_dir}】")
                     logger.info(f"")
                     logger.info(f"")
                     if not is_path_exists(conn, token, dst_dir):
