@@ -209,6 +209,7 @@ def get_storage_list(connection, token):
 def recursive_copy(src_dir, dst_dir, connection, token, sync_delete=False):
     # 递归复制文件夹内容
     global dst_contents
+    size_info = {}
     try:
         src_contents = get_directory_contents(connection, token, src_dir)["content"]
     except Exception as e:
@@ -284,7 +285,9 @@ def recursive_copy(src_dir, dst_dir, connection, token, sync_delete=False):
             else:
                 src_size = item["size"]
                 dst_size = is_directory_size(connection, token, dst_item_path)
-            if src_size == dst_size:
+                size_info['src_size'] = src_size
+                size_info['dst_size'] = dst_size
+            if size_info.get('src_size') == size_info.get('dst_size'):
                 logger.info(f"文件【{item_name}】已存在，跳过复制")
             else:
                 logger.info(f"文件【{item_name}】文件存在变更，删除文件")
