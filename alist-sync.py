@@ -4,7 +4,7 @@ import re
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 import time
-from datetime import datetime
+from datetime import datetime,timedelta
 import os
 import logging
 
@@ -191,6 +191,10 @@ def is_directory_size(connection, token, directory_path):
     response = directory_operation(connection, token, "get", path=directory_path)
     return response["data"]["size"]
 
+def is_directory_modified_date(connection, token, directory_path):
+    # 获取文件修改时间
+    response = directory_operation(connection, token, "get", path=directory_path)
+    return response["data"]["modified"]
 
 def directory_remove(connection, token, directory_path, file_name):
     # 删除文件
@@ -216,6 +220,30 @@ def get_storage_list(connection, token):
         logger.error("获取存储列表失败")
         return None
 
+def parse_time_and_adjust_utc(date_str):
+    """
+    使用正则表达式解析时间字符串，如果是UTC格式（包含'Z'）则加8小时
+    """
+    # 匹配ISO 8601格式类似 "2024-12-09T13:17:45.82Z" 或者 "2024-12-09T21:17:28.179+08:00" 等格式
+    iso_8601_pattern = r'(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(\.\d+)?([+-]\d{2}:\d{2}|Z)?'
+    match_iso = re.match(iso_8601_pattern, date_str)
+    if match_iso:
+        year, month, day, hour, minute, second, microsecond, timezone = match_iso.groups()
+        if microsecond:
+            microsecond = int(float(microsecond) * 1000000)  # 将小数形式的微秒转换为整数
+        else:
+            microsecond = 0
+        dt = datetime(int(year), int(month), int(day), int(hour), int(minute), int(second), microsecond)
+        if timezone == "Z":
+            dt = dt + timedelta(hours=8)  # 如果是UTC时间，增加8小时
+        elif timezone:
+            # 处理其他时区偏移量（这里暂简单处理时区转换，实际可能更复杂）
+            sign = 1 if timezone[0] == "+" else -1
+            hours = int(timezone[1:3])
+            minutes = int(timezone[4:6])
+            offset = timedelta(hours=sign * hours, minutes=sign * minutes)
+            dt = dt - offset
+        return dt
 
 def recursive_copy(src_dir, dst_dir, connection, token, sync_delete=False):
     # 递归复制文件夹内容
@@ -298,9 +326,18 @@ def recursive_copy(src_dir, dst_dir, connection, token, sync_delete=False):
                 if src_size == dst_size:
                     logger.info(f"文件【{item_name}】已存在，跳过复制")
                 else:
-                    logger.info(f"文件【{item_name}】文件存在变更，删除文件")
-                    directory_remove(connection, token, dst_dir, item_name)
-                    copy_item(connection, token, src_dir, dst_dir, item_name)
+                    # 获取文件修改时间
+                    src_modified_date = item["modified"]
+                    dst_modified_date = is_directory_modified_date(connection, token, dst_item_path)
+                    src_date = parse_time_and_adjust_utc(src_modified_date)
+                    dst_date = parse_time_and_adjust_utc(dst_modified_date)
+
+                    if dst_date > src_date:
+                        logger.info(f"文件【{item_name}】目标文件修改时间晚于源文件，跳过复制")
+                    else:
+                        logger.info(f"文件【{item_name}】文件存在变更，删除文件")
+                        directory_remove(connection, token, dst_dir, item_name)
+                        copy_item(connection, token, src_dir, dst_dir, item_name)
 
 
 def main():
