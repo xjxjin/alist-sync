@@ -212,7 +212,6 @@ def get_storage_list(connection, token):
 def recursive_copy(src_dir, dst_dir, connection, token, sync_delete=False):
     # 递归复制文件夹内容
     global dst_contents
-    size_info = {}
     try:
         src_contents = get_directory_contents(connection, token, src_dir)["content"]
     except Exception as e:
@@ -350,16 +349,3 @@ if __name__ == '__main__':
     if not cron_schedule or cron_schedule is None or cron_schedule == "None":
         # logger.info("CRON_SCHEDULE为空，将执行一次同步任务。")
         main()  # 执行一次同步任务
-    else:
-        # 添加任务到调度器，使用创建的CronTrigger实例
-        scheduler.add_job(main, trigger=trigger)
-
-        # 开始调度器
-        scheduler.start()
-        try:
-            # 这会阻塞主线程，但调度器在后台线程中运行
-            while True:
-                time.sleep(1)
-        except (KeyboardInterrupt, SystemExit):
-            # 如果主线程被中断（例如用户按Ctrl+C），则关闭调度器
-            scheduler.shutdown()
