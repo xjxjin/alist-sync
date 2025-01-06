@@ -13,7 +13,7 @@ def setup_logger():
     # 获取当前文件所在目录
     current_dir = os.path.dirname(os.path.abspath(__file__))
     # 创建日志目录
-    log_dir = os.path.join(current_dir, 'config_log')
+    log_dir = os.path.join(current_dir, 'data/log')
     os.makedirs(log_dir, exist_ok=True)
 
     # 设置日志文件路径
