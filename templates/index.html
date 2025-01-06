@@ -40,9 +40,22 @@
       margin-bottom: 3px;
       padding: 0 10px;
     }
+    /* 添加退出按钮样式 */
+    .logout-btn {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 999;
+    }
   </style>
 </head>
 <body>
+  <div class="logout-btn">
+    <button type="button" class="layui-btn layui-btn-danger" id="logoutBtn">
+      <i class="layui-icon layui-icon-logout"></i> 退出
+    </button>
+  </div>
+
   <div class="layui-container">
     <div id="loading" style="display: none;">
       <i class="layui-icon layui-icon-loading layui-anim layui-anim-rotate layui-anim-loop"></i>
@@ -1444,6 +1457,27 @@
             form.render('radio');
         });
     }
+
+    // 在脚本末尾添加退出按钮点击事件
+    $('#logoutBtn').on('click', function(){
+      layer.confirm('确定要退出吗？', function(index){
+        layer.close(index);
+        $.ajax({
+          url: '/api/logout',
+          method: 'GET',
+          success: function(res){
+            if(res.code === 200){
+              window.location.href = '/login';
+            } else {
+              layer.msg(res.message || '退出失败');
+            }
+          },
+          error: function(){
+            layer.msg('请求失败');
+          }
+        });
+      });
+    });
   });
   </script>
 </body>
