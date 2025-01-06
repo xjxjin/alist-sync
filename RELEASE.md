@@ -1,6 +1,6 @@
 ## Docker 部署
 ```bash
-docker pull ${DOCKER_IMAGE}:${VERSION}
+docker pull xjxjin/alist-sync:latest
 ```
 
 或使用 docker-compose:
@@ -8,7 +8,7 @@ docker pull ${DOCKER_IMAGE}:${VERSION}
 version: '3'
 services:
   alist-sync-web:
-    image: ${DOCKER_IMAGE}:${VERSION}
+    image: xjxjin/alist-sync:latest
     container_name: alist-sync-web
     restart: unless-stopped
     ports:
@@ -20,4 +20,10 @@ services:
 ```
 
 ## 支持的平台
-${PLATFORMS} 
+- linux/386
+- linux/amd64
+- linux/arm/v6
+- linux/arm/v7
+- linux/arm64
+- linux/ppc64le
+- linux/s390x 

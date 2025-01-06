@@ -139,18 +139,11 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         id: release_body
         run: |
-          # 读取模板文件并替换变量
-          PLATFORMS_LIST=$(echo "${{ env.PLATFORMS }}" | tr ',' '\n' | sed 's/^/- /')
-          RELEASE_BODY=$(cat RELEASE.md | \
-            sed "s|\${DOCKER_IMAGE}|${{ env.DOCKER_IMAGE }}|g" | \
-            sed "s|\${VERSION}|${{ github.ref_name }}|g" | \
-            sed "s|\${PLATFORMS}|$PLATFORMS_LIST|g")
-          # 将处理后的内容保存到文件
-          echo "$RELEASE_BODY" > release_body.txt
-          # 处理多行字符串
-          echo 'RELEASE_BODY<<EOF' >> $GITHUB_ENV
-          cat release_body.txt >> $GITHUB_ENV
-          echo 'EOF' >> $GITHUB_ENV
+          # 将 release 内容保存到输出变量
+          CONTENT=$(cat RELEASE.md)
+          echo "RELEASE_BODY<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$CONTENT" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
 
       - name: Create Release
         if: startsWith(github.ref, 'refs/tags/')
@@ -161,7 +154,7 @@ jobs:
           name: Release ${{ github.ref_name }}
           draft: false
           prerelease: false
-          body: ${{ env.RELEASE_BODY }}
+          body: ${{ steps.release_body.outputs.RELEASE_BODY }}
           files: |
             alist-sync-${{ github.ref_name }}-linux-386.zip
             alist-sync-${{ github.ref_name }}-linux-386.tar.gz
