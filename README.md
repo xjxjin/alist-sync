@@ -158,11 +158,10 @@ http://localhost:52441
 
 MIT License
 
+
 ## 数据同步
-![数据同步](https://raw.githubusercontent.com/xjxjin/alist-sync/main/static/images/数据同步.png)
+
+<img src="https://raw.githubusercontent.com/xjxjin/alist-sync/main/static/images/数据同步.png" width="700" alt="数据同步">
 
 ## 文件同步
-![文件同步](https://raw.githubusercontent.com/xjxjin/alist-sync/main/static/images/文件同步.png)
-
-
-
+<img src="https://raw.githubusercontent.com/xjxjin/alist-sync/main/static/images/文件同步.png" width="700" alt="文件同步">
