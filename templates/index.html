@@ -47,10 +47,23 @@
       right: 20px;
       z-index: 999;
     }
+    /* 修改按钮组样式 */
+    .header-btns {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 999;
+    }
+    .header-btns .layui-btn {
+      margin-left: 10px;
+    }
   </style>
 </head>
 <body>
-  <div class="logout-btn">
+  <div class="header-btns">
+    <button type="button" class="layui-btn layui-btn-normal" id="changePassword">
+      <i class="layui-icon layui-icon-password"></i> 修改密码
+    </button>
     <button type="button" class="layui-btn layui-btn-danger" id="logoutBtn">
       <i class="layui-icon layui-icon-logout"></i> 退出
     </button>
@@ -104,12 +117,6 @@
               <button type="button" class="layui-btn layui-btn-gray" id="testConnect">测试连接</button>
               <button type="button" class="layui-btn layui-btn-normal" lay-submit lay-filter="saveBaseConfig">保存连接配置</button>
               <button type="reset" class="layui-btn layui-btn-primary">重置</button>
-            </div>
-          </div>
-
-          <div class="layui-form-item">
-            <div class="layui-input-block">
-              <button type="button" class="layui-btn layui-btn-normal" id="changePassword">修改登录密码</button>
             </div>
           </div>
         </div>
