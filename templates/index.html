@@ -6,7 +6,8 @@
   <title>Alist-Sync 配置</title>
   <link rel="icon" href="../static/images/favicon.ico" type="image/x-icon">
   <link href="../static/layui/css/layui.css" rel="stylesheet">
-  
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
   <style>
     .main-container {
       width: 80%;
@@ -57,6 +58,40 @@
     .header-btns .layui-btn {
       margin-left: 10px;
     }
+    .star-tips {
+      text-align: center;
+      font-size: 16px;
+    }
+    .link-group {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+    }
+    .link-group .layui-btn {
+      padding: 0 15px;
+      height: 32px;
+      line-height: 32px;
+      border-radius: 4px;
+      transition: all 0.3s;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .link-group .layui-btn i {
+      font-size: 16px;
+    }
+    .link-group .github:hover {
+      color: #24292e;
+      border-color: #24292e;
+    }
+    .link-group .gitee:hover {
+      color: #c71d23;
+      border-color: #c71d23;
+    }
+    .link-group .dockerhub:hover {
+      color: #099cec;
+      border-color: #099cec;
+    }
   </style>
 </head>
 <body>
@@ -80,6 +115,21 @@
     <div class="page-header">
       <img src="../static/images/logo.png" alt="Alist-Sync">
       <h1>Alist-Sync 配置中心</h1>
+      <!-- 添加 Star 提示 -->
+      <div class="star-tips" style="margin: 15px 0; color: #666;">
+        如果好用，请Star！非常感谢！
+        <div class="link-group" style="margin-top: 10px;">
+          <a href="https://github.com/xjxjin/alist-sync" target="_blank" class="layui-btn layui-btn-primary github">
+            <i class="fab fa-github"></i> GitHub
+          </a>
+          <a href="https://gitee.com/xjxjin/alist-sync" target="_blank" class="layui-btn layui-btn-primary gitee">
+            <i class="fab fa-git-alt"></i> Gitee
+          </a>
+          <a href="https://hub.docker.com/r/xjxjin/alist-sync" target="_blank" class="layui-btn layui-btn-primary dockerhub">
+            <i class="fab fa-docker"></i> DockerHub
+          </a>
+        </div>
+      </div>
     </div>
 
     <form class="layui-form" action="javascript:void(0);">
