@@ -1,0 +1,14 @@
+version: '3'
+
+services:
+  alist-sync-web:
+    image: xjxjin/alist-sync:latest
+    container_name: alist-sync-web
+    restart: unless-stopped
+    ports:
+      - "52441:52441"
+    volumes:
+      - ./config_data:/app/config_data
+      - ./config_log:/app/config_log
+    environment:
+      - TZ=Asia/Shanghai 

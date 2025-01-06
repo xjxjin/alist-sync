@@ -1,13 +1,7 @@
-<div align="center">
-  
-# alist网盘自动同步
-</div>
+# Alist-Sync-Web
 
-* alist可以设置目录定时转存到各个网盘，做到夸网盘，多备份的效果
-* 可以将自己挂载的alist 下的各个目录相互间进行同步，原理是采用alist原始api调用执行
-* 同步原理1.匹配文件名称是否相同,2.文件大小是否相同，相同会跳过同步，不同会将目标文件删除后再进行文件同步
-* 目前存在的一个问题，有文件会随机同步失败，但同一个文件不会一直同步失败，建议每天同步一次，可以将同步漏了的文件补上
-* 当目标文件修改时间晚于源文件修改时间，跳过修改
+一个基于 Web 界面的 Alist 存储同步工具，支持多任务管理、定时同步、差异处理等功能。
+
 
 <div align="center">
   
@@ -20,138 +14,149 @@
 [docker-url]: https://hub.docker.com/r/xjxjin/alist-sync
 </div>
 
-## 参数
+
+
+## 功能特点
+
+- 📱 美观的 Web 管理界面
+- 🔄 支持多任务管理
+- ⏰ 支持 Cron 定时任务
+- 📂 支持数据同步和文件同步两种模式
+- 🗑️ 支持多种差异处理策略（保留/移动到回收站/删除）
+- 📝 详细的同步日志记录
+- 🔒 支持用户认证和密码管理
+- 🐳 支持 Docker 部署
+
+
+
+
+## 快速开始
+
+### Docker 部署（推荐）
+
+1. 创建必要的目录：
 
 ```bash
-BASE_URL  服务器基础URL(结尾不带/)
-USERNAME 用户名
-PASSWORD  密码
-DIR_PAIRS  源目录和目标目录的配对(源目录和目标目录的配对，用分号隔开，冒号分隔)
-CRON_SCHEDULE 调度日期，参考cron语法   "分 时 日 月 周" 非必填，不填为一次调度
---以下参数用于目标目录有，但源目录不存在的文件处理，可选参数--
-SYNC_DELETE_ACTION 同步删除动作，可选值为move,delete。
-当SYNC_DELETE_ACTION设置为move时，文件将移动到trash目录下；比如存储器目录为 /dav/quark，则源目录多余的文件将会移动到/dav/quark/trash 目录下
-
+mkdir -p /DATA/AppData/alist-sync-web/data 
 ```
 
-### demo
-```bash
-docker run -d --name alist-sync \
--e TZ=Asia/Shanghai \
--e BASE_URL=http://192.168.xxx.xx:5244 \
--e USERNAME=xxx \
--e PASSWORD=xxx \
--e DIR_PAIRS=/dav/aliyundrive/同步目录/工作:/dav/quark/同步目录1/工作;/dav/quark/同步目录1/工作:/dav/aliyundrive/同步目录/工作 \
--e "CRON_SCHEDULE=5 16 * * *" \
--e SYNC_DELETE_ACTION=move \
-xjxjin/alist-sync:latest
-```
-
-### docker-compose.yml 
+2. 创建 docker-compose.yml：
 
 ```bash
-name: alist-sync
+version: '3'
+
 services:
-    alist-sync:
-        container_name: alist-sync
-        environment:
-            - TZ=Asia/Shanghai
-            - BASE_URL=http://192.168.xxx.xx:5244
-            - USERNAME=xxx
-            - PASSWORD=xxx
-            - DIR_PAIRS=/dav/aliyundrive/同步目录/工作:/dav/quark/同步目录1/工作;/dav/quark/同步目录1/工作:/dav/aliyundrive/同步目录/工作
-            - CRON_SCHEDULE=5 16 * * *
-            - SYNC_DELETE_ACTION=move
-        image: xjxjin/alist-sync:latest
+  alist-sync-web:
+    image: xjxjin/alist-sync:latest
+    container_name: alist-sync-web
+    restart: unless-stopped
+    ports:
+      - "52441:52441"
+    volumes:
+      - /DATA/AppData/alist-sync-web/data:/app/data
+    environment:
+      - TZ=Asia/Shanghai 
 ```
 
-* 这个的意思是 需要将
-* 源目录`/dav/aliyundrive/同步目录/工作`下的文件夹以及文件，同步到目标目录`/dav/quark/同步目录1/工作`下
-* 源目录`/dav/quark/同步目录1/工作`，同步到目标目录`/dav/aliyundrive/同步目录/工作`下
-* 也就是说两个目录相互备份
-* 如果`/dav/aliyundrive/同步目录/工作`中删除了已同步到`/dav/quark/同步目录1/工作`的文件A,那么文件A会被移动到`/dav/quark/trash/同步目录1/工作`目录下
-* **警告：在两个目录相互备份的情况下使用同步删除功能时请格外谨慎。可能导致文件永久丢失，后果自负。**
-
-### 注意 DIR_PAIRS格式为  ，用分号隔开，冒号分隔，英文冒号，英文分号
-
-
-### 青龙
-需要在环境变量处设置参数
+3. 启动服务：
 
 ```bash
-BASE_URL
-USERNAME
-PASSWORD
-DIR_PAIRS
-SYNC_DELETE_ACTION
+docker-compose up -d
 ```
 
+4. 访问 Web 界面：
 
-国内执行
+http://localhost:52441
 
-```bash
-ql raw https://gitee.com/xjxjin/alist-sync/raw/main/alist-sync-ql.py
-```
-国际执行
+默认登录账号：
+- 用户名：admin
+- 密码：admin
 
-```bash
-ql raw https://github.com/xjxjin/alist-sync/raw/main/alist-sync-ql.py
-```
-![img_1.png](img_1.png)
+## 使用说明
 
-## 执行完成后可以在复制页面查看进度
-<img width="1628" alt="image" src="https://github.com/xjxjin/alist-sync/assets/35513148/f2b907a2-8d84-4b01-a748-8d08e570af5e">
+### 1. 基础配置
 
-## 2024-12-16更新
+首次使用需要配置 Alist 的基本连接信息：
+- 服务地址：Alist 服务的访问地址
+- 用户名：Alist 管理员账号
+- 密码：Alist 管理员密码
 
-### 1.优化功能
- * 当源文件和目标文件大小不一致时，如果目标文件修改时间晚于源文件，则跳过覆盖
+### 2. 同步任务配置
 
-## 2024-11-13更新
-### 1.修复bug
- * 修复删除目标目录多余文件重复删除问题
- * 优化移动目标目录多余文件到存储器根目录
-### 2.优化功能
- * 优化设置多目录，一个目录失败导致所有目录失败问题
+支持两种同步模式：
+
+#### 数据同步模式
+- 选择源存储器和目标存储器
+- 配置同步目录
+- 支持排除目录
+- 支持多目标存储同步
+- 参照最后图片
+
+#### 文件同步模式
+- 手动配置源路径和目标路径
+- 支持多个路径对
+- 支持排除目录
+- 参照最后图片
+
+### 3. 差异处理策略
+
+提供三种差异处理方式：
+- 不处理：保留目标目录中的差异文件
+- 移动到回收站：将差异文件移动到目标存储的回收站
+- 删除：直接删除目标目录中的差异文件
+- 移动/删除 在有的存储源会失效欢迎提交Issue，我反馈到 Alist 作者
+
+### 4. 定时任务
+
+- 支持 Cron 表达式配置定时任务
+- 可查看未来 5 次执行时间
+- 支持立即执行功能
+
+### 5. 日志查看
+
+- 支持查看当前日志
+- 支持查看历史日志
+- 日志自动按天切割
+
+## 配置文件说明
+
+所有配置文件存储在 `data/config` 目录：
+- `base_config.json`：基础连接配置
+- `sync_config.json`：同步任务配置
+- `users_config.json`：用户认证配置
+
+日志文件存储在 `data/log` 目录：
+- `alist_sync.log`：当前日志
+- `alist_sync.log.YYYY-MM-DD`：历史日志
+
+## 注意事项
+
+1. 首次使用请修改默认登录密码
+2. 建议定期备份配置文件
+3. 请确保 Alist 服务正常可访问
+4. 建议先测试连接再保存配置
+5. 可以通过日志查看同步执行情况
+
+## 更新记录
+
+### v1.0.0
+- 初始版本发布
+- 支持基础的同步功能
+- 支持 Web 界面管理
+
+## 问题反馈
+
+如果您在使用过程中遇到任何问题，请提交 Issue。
+
+## Tips
+- 前端页面均为 AI 生成，使用过程中可能有小瑕疵，欢迎前端大神提交代码修复
+- 初次使用，保存基础配置后，可以点击添加任务，刷新源存储器和目标存储器下拉列表
+- 如果忘记密码，请删除data/config/users_config.json 文件，会默认变成 admin/admin
+- 有其他新增功能欢迎提交 Issue。
+- 文件同步填写全目录，参照最后面图片
+## License
+
+MIT License
 
 
-## 2024-09-06更新
-### 1.新增参数，处理目标目录有多的文件或者文件夹，但是源目录没有的处理方式,功能由【[RWDai](https://github.com/RWDai)】小哥提供
- * none 什么也不做
- * move 移动到目标目录下的trash目录
- * delete 真实删除 
 
-
-* 移动之前源目录
-![img_4.png](img_4.png)
-
-* 移动之前目标目录
-![img_3.png](img_3.png)
-
-* 移动之后目标目录
-![img_2.png](img_2.png)
-
-
-## 2024-05-13更新
-### 1.新增文件存在判断逻辑  
- * 文件名称 
- * 文件大小
-### 2.CRON_SCHEDULE 变更为参数可选
- * 当参数不传变更为一次调度，可以配合青龙远程调度
-
-## 2024-05-23更新
-* 新增青龙调度
-
-
-## 2024-06-29更新
-* 新增DIR_PAIRS参数个数,最多到50，参数内容和之前一致(源目录和目标目录的配对(源目录和目标目录的配对，用分号隔开，冒号分隔)),参数格式为
-```bash
-DIR_PAIRS
-DIR_PAIRS1
-DIR_PAIRS2
-DIR_PAIRS3
-.....
-DIR_PAIRS50
-```
-
-![img.png](img.png)
