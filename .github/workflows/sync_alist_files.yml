@@ -8,6 +8,13 @@ on:
     paths:
       - 'action.txt'
 
+# 添加权限配置
+permissions:
+  contents: write
+  packages: write
+  issues: write
+  pull-requests: write
+
 env:
   DOCKER_IMAGE: ${{ github.repository }}  # 请替换成你的 Docker Hub 用户名和镜像名
   PLATFORMS: linux/386,linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64,linux/ppc64le,linux/s390x
@@ -71,63 +78,102 @@ jobs:
           short-description: "Alist-Sync - A tool for syncing files between Alist storages"
 
       # 以下是新增的 Release 相关步骤
-      - name: Create Release
-        if: startsWith(github.ref, 'refs/tags/')
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-          draft: false
-          prerelease: false
-          body: |
-            ## Docker 部署
-            ```bash
-            docker pull xjxjin/alist-sync-web:${{ steps.get_version.outputs.VERSION }}
-            ```
-            
-            或使用 docker-compose:
-            ```yaml
-            version: '3'
-            services:
-              alist-sync-web:
-                image: xjxjin/alist-sync-web:${{ steps.get_version.outputs.VERSION }}
-                container_name: alist-sync-web
-                restart: unless-stopped
-                ports:
-                  - "52441:52441"
-                volumes:
-                  - /DATA/AppData/alist-sync-web/data:/app/data
-                environment:
-                  - TZ=Asia/Shanghai
-            ```
-
       - name: Create Source Archive
         if: startsWith(github.ref, 'refs/tags/')
         run: |
-          zip -r alist-sync-${{ steps.get_version.outputs.VERSION }}.zip . -x "*.git*"
-          tar czf alist-sync-${{ steps.get_version.outputs.VERSION }}.tar.gz --exclude=.git .
+          # 创建临时目录
+          TEMP_DIR="/tmp/alist-sync-release"
+          mkdir -p "$TEMP_DIR"
+          
+          # 定义要包含的文件列表
+          INCLUDE_FILES=(
+            "alist-sync-web.py"
+            "alist_sync.py"
+            "requirements.txt"
+            "Dockerfile"
+            "docker-compose.yml"
+            "README.md"
+            "static"
+            "templates"
+          )
+          
+          # 定义平台列表
+          PLATFORMS=(
+            "linux-386"
+            "linux-amd64"
+            "linux-arm-v6"
+            "linux-arm-v7"
+            "linux-arm64"
+            "linux-ppc64le"
+            "linux-s390x"
+          )
+          
+          # 为每个平台创建一个包
+          for platform in "${PLATFORMS[@]}"; do
+            # 创建平台特定的临时目录
+            PLATFORM_DIR="$TEMP_DIR/$platform"
+            mkdir -p "$PLATFORM_DIR"
+            
+            # 复制文件到平台目录
+            for item in "${INCLUDE_FILES[@]}"; do
+              if [ -e "$item" ]; then
+                cp -r "$item" "$PLATFORM_DIR/"
+              fi
+            done
+            
+            # 在平台目录中创建压缩包
+            cd "$PLATFORM_DIR"
+            
+            # 创建 ZIP 文件
+            zip -r "alist-sync-${{ github.ref_name }}-${platform}.zip" ./*
+            
+            # 创建 TAR.GZ 文件
+            tar --exclude='.[^/]*' -czf "alist-sync-${{ github.ref_name }}-${platform}.tar.gz" ./*
+            
+            # 移动压缩包到工作目录
+            mv "alist-sync-${{ github.ref_name }}-${platform}.zip" "$GITHUB_WORKSPACE/"
+            mv "alist-sync-${{ github.ref_name }}-${platform}.tar.gz" "$GITHUB_WORKSPACE/"
+          done
 
-      - name: Upload Release Assets
+      - name: Generate Release Body
         if: startsWith(github.ref, 'refs/tags/')
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./alist-sync-${{ steps.get_version.outputs.VERSION }}.zip
-          asset_name: alist-sync-${{ steps.get_version.outputs.VERSION }}.zip
-          asset_content_type: application/zip
+        id: release_body
+        run: |
+          # 读取模板文件并替换变量
+          PLATFORMS_LIST=$(echo "${{ env.PLATFORMS }}" | tr ',' '\n' | sed 's/^/- /')
+          RELEASE_BODY=$(cat RELEASE.md | \
+            sed "s|\${DOCKER_IMAGE}|${{ env.DOCKER_IMAGE }}|g" | \
+            sed "s|\${VERSION}|${{ github.ref_name }}|g" | \
+            sed "s|\${PLATFORMS}|$PLATFORMS_LIST|g")
+          # 将处理后的内容保存到文件
+          echo "$RELEASE_BODY" > release_body.txt
+          # 处理多行字符串
+          echo 'RELEASE_BODY<<EOF' >> $GITHUB_ENV
+          cat release_body.txt >> $GITHUB_ENV
+          echo 'EOF' >> $GITHUB_ENV
 
-      - name: Upload Release Assets (tar.gz)
+      - name: Create Release
         if: startsWith(github.ref, 'refs/tags/')
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        id: create_release
+        uses: softprops/action-gh-release@v1
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./alist-sync-${{ steps.get_version.outputs.VERSION }}.tar.gz
-          asset_name: alist-sync-${{ steps.get_version.outputs.VERSION }}.tar.gz
-          asset_content_type: application/gzip
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          body: ${{ env.RELEASE_BODY }}
+          files: |
+            alist-sync-${{ github.ref_name }}-linux-386.zip
+            alist-sync-${{ github.ref_name }}-linux-386.tar.gz
+            alist-sync-${{ github.ref_name }}-linux-amd64.zip
+            alist-sync-${{ github.ref_name }}-linux-amd64.tar.gz
+            alist-sync-${{ github.ref_name }}-linux-arm-v6.zip
+            alist-sync-${{ github.ref_name }}-linux-arm-v6.tar.gz
+            alist-sync-${{ github.ref_name }}-linux-arm-v7.zip
+            alist-sync-${{ github.ref_name }}-linux-arm-v7.tar.gz
+            alist-sync-${{ github.ref_name }}-linux-arm64.zip
+            alist-sync-${{ github.ref_name }}-linux-arm64.tar.gz
+            alist-sync-${{ github.ref_name }}-linux-ppc64le.zip
+            alist-sync-${{ github.ref_name }}-linux-ppc64le.tar.gz
+            alist-sync-${{ github.ref_name }}-linux-s390x.zip
+            alist-sync-${{ github.ref_name }}-linux-s390x.tar.gz
