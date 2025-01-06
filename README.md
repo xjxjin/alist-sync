@@ -2,10 +2,11 @@
 
 一个基于 Web 界面的 Alist 存储同步工具，支持多任务管理、定时同步、差异处理等功能。
 
-
 <div align="center">
   
-[![github tag][gitHub-tag-image]][github-url] [![docker pulls][docker-pulls-image]][docker-url] [![docker image size][docker-image-size-image]][docker-url]
+[![github tag][gitHub-tag-image]][github-url] [![docker pulls][docker-pulls-image]][docker-url] [![docker image size][docker-image-size-image]][docker-url]  
+**如果好用，请Star！非常感谢！**  [GitHub](https://github.com/xjxjin/alist-sync) [Gitee](https://gitee.com/xjxjin/alist-sync) [DockerHub](https://hub.docker.com/r/xjxjin/alist-sync)
+---
 
 [gitHub-tag-image]: https://img.shields.io/github/v/tag/xjxjin/alist-sync
 [docker-pulls-image]: https://img.shields.io/docker/pulls/xjxjin/alist-sync
@@ -160,7 +161,6 @@ MIT License
 
 
 ## 数据同步
-
 <img src="https://raw.githubusercontent.com/xjxjin/alist-sync/main/static/images/数据同步.png" width="700" alt="数据同步">
 
 ## 文件同步
