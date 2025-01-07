@@ -92,6 +92,75 @@
       color: #099cec;
       border-color: #099cec;
     }
+    /* 移动端适配样式 */
+    @media screen and (max-width: 768px) {
+      .main-container {
+        width: 95%;
+        margin: 10px auto;
+      }
+
+      /* 调整头部按钮位置 */
+      .header-btns {
+        position: static;
+        text-align: center;
+        margin: 10px 0;
+      }
+
+      .header-btns .layui-btn {
+        margin: 5px;
+      }
+
+      /* 调整表单项布局 */
+      .layui-form-label {
+        width: auto;
+        padding: 9px 0;
+        text-align: left;
+        float: none;
+      }
+
+      .layui-input-block,
+      .layui-input-inline {
+        margin-left: 0 !important;
+        width: 100% !important;
+      }
+
+      /* 调整路径对布局 */
+      .path-pair {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .path-pair .layui-form-label {
+        padding: 5px 0;
+      }
+
+      .path-pair .layui-input-inline {
+        margin-right: 0;
+      }
+
+      /* 调整按钮组布局 */
+      .layui-form-item .layui-input-block {
+        margin-left: 0;
+        text-align: center;
+      }
+
+      .layui-form-item .layui-input-block .layui-btn {
+        margin: 5px;
+      }
+
+      /* 调整链接组布局 */
+      .link-group {
+        flex-wrap: wrap;
+      }
+
+      /* 调整同步目标差异处置策略布局 */
+      .syncDelAction-group {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -202,11 +271,11 @@
               <div class="layui-form-item">
                 <label class="layui-form-label" title="处理目标目录有但是源目录没有的文件">同步目标差异处置策略</label>
                 <div class="layui-input-block syncDelAction-group">
-                  <input type="radio" name="syncDelAction_1" value="none" title="不处理目标目录差异项" checked 
+                  <input type="radio" name="syncDelAction_1" value="none" title="不处理目标目录差异项" checked
                          lay-group="syncDelAction_1">
-                  <input type="radio" name="syncDelAction_1" value="move" title="移至目标目录回收站" 
+                  <input type="radio" name="syncDelAction_1" value="move" title="移至目标目录回收站"
                          lay-group="syncDelAction_1">
-                  <input type="radio" name="syncDelAction_1" value="delete" title="删除目标目录多余项" 
+                  <input type="radio" name="syncDelAction_1" value="delete" title="删除目标目录多余项"
                          lay-group="syncDelAction_1">
                 </div>
               </div>
@@ -267,7 +336,6 @@
                         <i class="layui-icon">&#xe67e;</i>
                       </button>
                     </div>
-                    <hr class="layui-border-green" style="margin: 5px 0;">
                   </div>
                 </div>
               </div>
@@ -329,28 +397,28 @@
       <div class="layui-form-item">
         <label class="layui-form-label">新用户名</label>
         <div class="layui-input-block">
-          <input type="text" name="newUsername" required lay-verify="required" 
+          <input type="text" name="newUsername" required lay-verify="required"
             placeholder="请输入新用户名" class="layui-input">
         </div>
       </div>
       <div class="layui-form-item">
         <label class="layui-form-label">原密码</label>
         <div class="layui-input-block">
-          <input type="password" name="oldPassword" required lay-verify="required" 
+          <input type="password" name="oldPassword" required lay-verify="required"
             placeholder="请输入原密码" class="layui-input">
         </div>
       </div>
       <div class="layui-form-item">
         <label class="layui-form-label">新密码</label>
         <div class="layui-input-block">
-          <input type="password" name="newPassword" required lay-verify="required" 
+          <input type="password" name="newPassword" required lay-verify="required"
             placeholder="请输入新密码" class="layui-input">
         </div>
       </div>
       <div class="layui-form-item">
         <label class="layui-form-label">确认密码</label>
         <div class="layui-input-block">
-          <input type="password" name="confirmPassword" required lay-verify="required" 
+          <input type="password" name="confirmPassword" required lay-verify="required"
             placeholder="请再次输入新密码" class="layui-input">
         </div>
       </div>
@@ -365,17 +433,14 @@
   <script type="text/html" id="logsViewTpl">
     <div style="padding: 15px;">
       <div class="layui-form">
-        <div class="layui-form-item">
-          <label class="layui-form-label">日期选择</label>
-          <div class="layui-input-inline">
-            <input type="text" class="layui-input" id="logDate" placeholder="选择日期">
-          </div>
-          <div class="layui-input-inline">
-            <button type="button" class="layui-btn layui-btn-primary" id="refreshLogs">刷新</button>
+        <div class="layui-form-item" style="margin-bottom: 10px;">
+          <div class="layui-inline" style="width: 100%; margin-right: 0;">
+            <input type="text" class="layui-input" id="logDate" placeholder="选择日期" style="margin-bottom: 10px;">
+            <button type="button" class="layui-btn layui-btn-primary layui-btn-fluid" id="refreshLogs">刷新</button>
           </div>
         </div>
       </div>
-      <div class="logs-content" style="margin-top: 10px; max-height: 500px; overflow-y: auto;">
+      <div class="logs-content" style="margin-top: 10px; max-height: 70vh; overflow-y: auto;">
       </div>
     </div>
   </script>
@@ -415,12 +480,12 @@
 
             if(storagesRes.code === 200) {
                 const storagesList = storagesRes.data;
-                
+
                 // 遍历所有任务并更新存储器
                 $('.task-item').each(function() {
                     const $task = $(this);
                     const taskId = $task.attr('data-task-id');
-                    
+
                     // 保存当前选中的值
                     const currentSourceStorage = $task.find(`select[name="sourceStorage_${taskId}"]`).val();
                     const currentTargetStorages = [];
@@ -533,7 +598,6 @@
             '<i class="layui-icon">&#xe67e;</i>' +
           '</button>' +
         '</div>' +
-        '<hr class="layui-border-green" style="margin: 5px 0;">' +
       '</div>');
 
       $container.append($pathPair);
@@ -602,7 +666,6 @@
 
       if($pathPairs.find('.path-pair').length > 1) {
         $pathPair.remove();
-        ensureLastPathPairHasHr($pathPairs);
       } else {
         layer.msg('至少保留一对目录');
       }
@@ -642,19 +705,19 @@
     function createNewTask(taskId) {
         var $newTask = $('.task-item:first').clone();
         $newTask.attr('data-task-id', taskId);
-        
+
         // 更新所有需要唯一ID的元素
         updateTaskIds($newTask, taskId);
-        
+
         // 清空所有输入
         clearTaskInputs($newTask);
-        
+
         // 重新绑定同步目标差异处置策略的事件
         bindSyncDelActionEvents($newTask);
-        
+
         // 重新绑定查看时间按钮事件
         bindCheckNextTimeEvent($newTask);
-        
+
         return $newTask;
     }
 
@@ -668,10 +731,10 @@
           'lay-group': name
         });
       });
-      
+
       // 更新同步模式的name属性
       $task.find('input[name^="syncMode_"]').attr('name', `syncMode_${taskId}`);
-      
+
       // 更新其他ID相关属性
       $task.find('select[name^="sourceStorage_"]').attr('name', `sourceStorage_${taskId}`);
       $task.find('#dataSyncConfig_1').attr('id', `dataSyncConfig_${taskId}`);
@@ -686,21 +749,21 @@
       $task.find('input[type="text"]').val('');
       $task.find('select').val('');
       $task.find('input[type="checkbox"]').prop('checked', false);
-      
+
       // 重置同步目标差异处置策略为默认值
       const taskId = $task.attr('data-task-id');
       const groupName = `syncDelAction_${taskId}`;
-      
+
       // 清除所有选中状态
       $task.find(`input[name="${groupName}"]`).prop('checked', false);
       // 设置默认值
       $task.find(`input[name="${groupName}"][value="none"]`).prop('checked', true);
-      
+
       // 重置同步模式为数据同步
       $task.find(`input[name="syncMode_${taskId}"][value="data"]`).prop('checked', true);
       $task.find('.data-sync-config').show();
       $task.find('.file-sync-config').hide();
-      
+
       // 清空路径对容器
       var $pathPairs = $task.find(`#pathPairs_${taskId}`);
       $pathPairs.empty();
@@ -856,13 +919,13 @@
             layer.msg('请至少配置一个同步任务', {icon: 2});
             return false;
         }
-        
+
         for(let task of tasks) {
             if(!task.taskName) {
                 layer.msg('任务名称不能为空');
                 return false;
             }
-            
+
             if(task.syncMode === 'data') {
                 if(!task.sourceStorage) {
                     layer.msg('请选择源存储器');
@@ -898,7 +961,7 @@
             var $task = $(this);
             var taskId = parseInt($task.attr('data-task-id'));
             var syncMode = $task.find(`input[name="syncMode_${taskId}"]:checked`).val();
-            
+
             var task = {
                 id: taskId, // 使用实际的任务ID
                 taskName: $task.find('input[name="taskName[]"]').val().trim(),
@@ -907,7 +970,7 @@
                 excludeDirs: $task.find('input[name="excludeDirs[]"]').val(),
                 cron: $task.find('input[name="cron[]"]').val()
             };
-            
+
             if(syncMode === 'data') {
                 task.sourceStorage = $task.find(`select[name="sourceStorage_${taskId}"]`).val();
                 task.targetStorages = [];
@@ -924,7 +987,7 @@
                     });
                 });
             }
-            
+
             tasks.push(task);
         });
         return tasks;
@@ -939,7 +1002,7 @@
 
       layer.confirm('确定要立即执行同步任务吗？', function(index){
         layer.close(index);
-        
+
         // 先保存配置
         $.ajax({
           url: '/api/save-sync-config',
@@ -955,7 +1018,7 @@
                 contentType: 'application/json',
                 data: JSON.stringify({ tasks: tasks })
               });
-              
+
               // 立即显示提示信息
               layer.msg('任务提交成功，请查看日志', {
                 icon: 1,
@@ -1038,10 +1101,10 @@
 
                 // 从模板创建新任务
                 const $task = $taskTemplate.clone();
-                
+
                 // 设置任务ID
                 $task.attr('data-task-id', task.id);
-                
+
                 // 更新所有ID相关属性
                 updateTaskIds($task, task.id);
 
@@ -1118,13 +1181,13 @@
       // 设置同步目标差异处置策略
       const taskId = task.id;
       const groupName = `syncDelAction_${taskId}`;
-      
+
       // 先移除之前的点击事件
       $task.find(`input[name="${groupName}"]`).off('click');
-      
+
       // 先清除所有选中状态
       $task.find(`input[name="${groupName}"]`).prop('checked', false);
-      
+
       // 设置正确的选中状态
       const syncDelAction = task.syncDelAction || 'none';
       const $syncDelAction = $task.find(`input[name="${groupName}"][value="${syncDelAction}"]`);
@@ -1137,7 +1200,7 @@
 
       // 重新绑定事件
       bindSyncDelActionEvents($task);
-      
+
       // 重新渲染表单
       form.render('radio');
 
@@ -1209,7 +1272,7 @@
     // 添加更新单个任务存储器函数
     async function updateTaskStorages($task, storagesList) {
       const taskId = $task.attr('data-task-id');
-      
+
       // 保存当前选中的值
       const currentSourceStorage = $task.find(`select[name="sourceStorage_${taskId}"]`).val();
       const currentTargetStorages = [];
@@ -1257,7 +1320,7 @@
       // 为初始任务绑定事件
       bindSyncDelActionEvents($('.task-item:first'));
       bindCheckNextTimeEvent($('.task-item:first'));
-      
+
       // 加载配置
       loadConfigs();
     });
@@ -1316,10 +1379,13 @@
 
     // 修改登录密码按钮点击事件
     $('#changePassword').on('click', function(){
+      const isMobile = window.innerWidth <= 768;
       layer.open({
         type: 1,
         title: '修改登录密码',
         content: $('#changePasswordTpl').html(),
+        area: isMobile ? ['95%', 'auto'] : ['500px', '400px'],
+        maxWidth: '100%',
         success: function(layero, index){
           // 获取当前登录用户名并填充
           var $form = layero.find('.layui-form');
@@ -1333,8 +1399,7 @@
               }
             }
           });
-        },
-        area: ['500px', '400px']
+        }
       });
     });
 
@@ -1384,11 +1449,16 @@
 
     // 查看日志按钮点击事件
     $('#viewLogs').on('click', function(){
+        // 根据屏幕宽度设置不同的弹窗大小
+        const isMobile = window.innerWidth <= 768;
         layer.open({
             type: 1,
             title: '执行日志',
             content: $('#logsViewTpl').html(),
-            area: ['800px', '600px'],
+            area: isMobile ? ['95%', '80%'] : ['800px', '600px'],
+            maxWidth: '100%',
+            maxHeight: '100%',
+            scrollbar: false,
             success: function(layero, index){
                 // 初始化日期选择器
                 laydate.render({
