@@ -1,24 +1,481 @@
 import http.client
 import json
 import re
-from datetime import datetime,timedelta
+from datetime import datetime, timedelta
 import os
 import logging
+from typing import List, Dict, Optional, Union
+from logging.handlers import TimedRotatingFileHandler
 
-# 配置日志记录器
-logging.basicConfig(level=logging.INFO,
-                    format='%(asctime)s - %(levelname)s - %(message)s',
-                    datefmt='%Y-%m-%d %H:%M:%S')
-logger = logging.getLogger(__name__)
 
-# 解析命令行参数
-base_url = os.environ.get("BASE_URL")
-username = os.environ.get("USERNAME")
-password = os.environ.get("PASSWORD")
-cron_schedule = os.environ.get("CRON_SCHEDULE")
+def setup_logger():
+    """配置日志记录器"""
+    # 获取当前文件所在目录
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    # 创建日志目录
+    log_dir = os.path.join(current_dir, 'data/log')
+    os.makedirs(log_dir, exist_ok=True)
 
-sync_delete_action = os.environ.get("SYNC_DELETE_ACTION", "none").lower()
-sync_delete = sync_delete_action == "move" or sync_delete_action == "delete"
+    # 设置日志文件路径
+    log_file = os.path.join(log_dir, 'alist_sync.log')
+
+    # 创建 TimedRotatingFileHandler
+    file_handler = TimedRotatingFileHandler(
+        filename=log_file,
+        when='midnight',
+        interval=1,
+        backupCount=7,
+        encoding='utf-8'
+    )
+
+    # 创建控制台处理器
+    console_handler = logging.StreamHandler()
+
+    # 设置日志格式
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    file_handler.setFormatter(formatter)
+    console_handler.setFormatter(formatter)
+
+    # 配置根日志记录器
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+
+    # 避免重复添加处理器
+    if not logger.handlers:
+        logger.addHandler(file_handler)
+        logger.addHandler(console_handler)
+
+    return logger
+
+
+# 初始化日志记录器
+logger = setup_logger()
+
+
+def parse_time_and_adjust_utc(date_str: str) -> datetime:
+    """
+    解析时间字符串，如果是UTC格式（包含'Z'）则加8小时
+    """
+    iso_8601_pattern = r'(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(\.\d+)?([+-]\d{2}:\d{2}|Z)?'
+    match_iso = re.match(iso_8601_pattern, date_str)
+    if match_iso:
+        year, month, day, hour, minute, second, microsecond, timezone = match_iso.groups()
+        if microsecond:
+            microsecond = int(float(microsecond) * 1000000)
+        else:
+            microsecond = 0
+        dt = datetime(int(year), int(month), int(day), int(hour), int(minute), int(second), microsecond)
+        if timezone == "Z":
+            dt = dt + timedelta(hours=8)  # UTC时间加8小时
+        elif timezone:
+            # 处理其他时区偏移量
+            sign = 1 if timezone[0] == "+" else -1
+            hours = int(timezone[1:3])
+            minutes = int(timezone[4:6])
+            offset = timedelta(hours=sign * hours, minutes=sign * minutes)
+            dt = dt - offset
+        return dt
+    return None
+
+
+class AlistSync:
+    def __init__(self, base_url: str, username: str, password: str, sync_delete_action: str = "none"):
+        """初始化AlistSync类"""
+        self.base_url = base_url
+        self.username = username
+        self.password = password
+        self.sync_delete_action = sync_delete_action.lower()
+        self.sync_delete = self.sync_delete_action in ["move", "delete"]
+        self.connection = self._create_connection()
+        self.token = None
+
+    def _create_connection(self) -> Union[http.client.HTTPConnection, http.client.HTTPSConnection]:
+        """创建HTTP(S)连接"""
+        try:
+            match = re.match(r"(?:http[s]?://)?([^:/]+)(?::(\d+))?", self.base_url)
+            if not match:
+                raise ValueError("Invalid base URL format")
+
+            host = match.group(1)
+            port_part = match.group(2)
+            port = int(port_part) if port_part else (443 if self.base_url.startswith("https://") else 80)
+
+            logger.info(f"创建连接 - 主机: {host}, 端口: {port}")
+            return (http.client.HTTPSConnection(host, port)
+                    if self.base_url.startswith("https://")
+                    else http.client.HTTPConnection(host, port))
+        except Exception as e:
+            logger.error(f"创建连接失败: {str(e)}")
+            raise
+
+    def _make_request(self, method: str, path: str, headers: Dict = None,
+                      payload: str = None) -> Optional[Dict]:
+        """发送HTTP请求并返回JSON响应"""
+        try:
+            logger.debug(f"发送请求 - 方法: {method}, 路径: {path}")
+            self.connection.request(method, path, body=payload, headers=headers)
+            response = self.connection.getresponse()
+            result = json.loads(response.read().decode("utf-8"))
+            logger.debug(f"请求响应: {result}")
+            return result
+        except Exception as e:
+            logger.error(f"请求失败 - 方法: {method}, 路径: {path}, 错误: {str(e)}")
+            return None
+
+    def login(self) -> bool:
+        """登录并获取token"""
+        payload = json.dumps({"username": self.username, "password": self.password})
+        headers = {
+            "User-Agent": "Apifox/1.0.0 (https://apifox.com)",
+            "Content-Type": "application/json"
+        }
+        response = self._make_request("POST", "/api/auth/login", headers, payload)
+        if response and response.get("data", {}).get("token"):
+            self.token = response["data"]["token"]
+            return True
+        logger.error("获取token失败")
+        return False
+
+    def _directory_operation(self, operation: str, **kwargs) -> Optional[Dict]:
+        """执行目录操作"""
+        if not self.token:
+            if not self.login():
+                return None
+
+        headers = {
+            "Authorization": self.token,
+            "User-Agent": "Apifox/1.0.0 (https://apifox.com)",
+            "Content-Type": "application/json"
+        }
+        payload = json.dumps(kwargs)
+        path = f"/api/fs/{operation}"
+        return self._make_request("POST", path, headers, payload)
+
+    def get_directory_contents(self, directory_path: str) -> List[Dict]:
+        """获取目录内容"""
+        response = self._directory_operation("list", path=directory_path)
+        return response.get("data", {}).get("content", []) if response else []
+
+    def create_directory(self, directory_path: str) -> bool:
+        """创建目录"""
+        response = self._directory_operation("mkdir", path=directory_path)
+        if response:
+            logger.info(f"文件夹【{directory_path}】创建成功")
+            return True
+        logger.error("文件夹创建失败")
+        return False
+
+    def copy_item(self, src_dir: str, dst_dir: str, item_name: str) -> bool:
+        """复制文件或目录"""
+        response = self._directory_operation("copy",
+                                             src_dir=src_dir,
+                                             dst_dir=dst_dir,
+                                             names=[item_name])
+        if response:
+            logger.info(f"文件【{item_name}】复制成功")
+            return True
+        logger.error("文件复制失败")
+        return False
+
+    def move_item(self, src_dir: str, dst_dir: str, item_name: str) -> bool:
+        """移动文件或目录"""
+        response = self._directory_operation("move",
+                                             src_dir=src_dir,
+                                             dst_dir=dst_dir,
+                                             names=[item_name])
+        if response:
+            logger.info(f"文件从【{src_dir}/{item_name}】移动到【{dst_dir}/{item_name}】移动成功")
+            return True
+        logger.error("文件移动失败")
+        return False
+
+    def is_path_exists(self, path: str) -> bool:
+        """检查路径是否存在"""
+        response = self._directory_operation("get", path=path)
+        return bool(response and response.get("message") == "success")
+
+    def get_storage_list(self) -> List[str]:
+        """获取存储列表"""
+        if not self.token:
+            if not self.login():
+                return []
+
+        headers = {
+            "Authorization": self.token,
+            "User-Agent": "Apifox/1.0.0 (https://apifox.com)",
+            "Content-Type": "application/json"
+        }
+        response = self._make_request("GET", "/api/admin/storage/list", headers)
+        if response:
+            storage_list = response["data"]["content"]
+            return [item["mount_path"] for item in storage_list]
+        logger.error("获取存储列表失败")
+        return []
+
+    def sync_directories(self, src_dir: str, dst_dir: str, exclude_dirs: str = None) -> bool:
+        """同步两个目录"""
+        try:
+            logger.info(f"开始同步目录 - 源目录: {src_dir}, 目标目录: {dst_dir}")
+            if not self.is_path_exists(dst_dir):
+                logger.info(f"目标目录不存在，创建目录: {dst_dir}")
+                if not self.create_directory(dst_dir):
+                    return False
+            result = self._recursive_copy(src_dir, dst_dir, exclude_dirs)
+            logger.info(f"目录同步完成 - 源目录: {src_dir}, 目标目录: {dst_dir}, 结果: {'成功' if result else '失败'}")
+            return result
+        except Exception as e:
+            logger.error(f"同步目录失败: {str(e)}")
+            return False
+
+    def _recursive_copy(self, src_dir: str, dst_dir: str, exclude_dirs: str = None) -> bool:
+        """递归复制目录内容"""
+        try:
+            if src_dir == exclude_dirs:
+                logger.info(f"排除目录: {src_dir}, 跳过同步")
+                return True
+            else:
+                logger.info(f"开始递归复制 - 源目录: {src_dir}, 目标目录: {dst_dir}")
+                src_contents = self.get_directory_contents(src_dir)
+                if not src_contents:
+                    logger.info(f"源目录为空或获取内容失败: {src_dir}")
+                    # return True
+
+                if self.sync_delete:
+                    self._handle_sync_delete(src_dir, dst_dir, src_contents)
+                if src_contents:
+                    for item in src_contents:
+                        if not self._copy_item_with_check(src_dir, dst_dir, item, exclude_dirs):
+                            logger.error(f"复制项目失败: {item.get('name', '未知项目')}")
+                            return False
+                    logger.info(f"递归复制完成 - 源目录: {src_dir}, 目标目录: {dst_dir}")
+                return True
+        except Exception as e:
+            logger.error(f"递归复制失败: {str(e)}")
+        return False
+
+    def _handle_sync_delete(self, src_dir: str, dst_dir: str, src_contents: List[Dict]):
+        """处理同步删除逻辑"""
+        try:
+            dst_contents = self.get_directory_contents(dst_dir)
+            src_names = {}
+            if src_contents:
+                src_names = {item["name"] for item in src_contents}
+
+            dst_names = {}
+            if dst_contents:
+                dst_names = {item["name"] for item in dst_contents}
+
+            if src_names:
+                to_delete = dst_names - src_names
+            else:
+                to_delete = dst_names
+
+            if not to_delete:
+                logger.info("没有需要删除的项目")
+                return
+
+            for name in to_delete:
+                if self.sync_delete_action == "move":
+                    logger.info(f"处理同步移动 - 目录: {dst_dir}")
+                    logger.info(f"处理移动项目: {name}")
+                    trash_dir = self._get_trash_dir(dst_dir)
+                    if trash_dir:
+                        if not self.is_path_exists(trash_dir):
+                            logger.info(f"创建回收站目录: {trash_dir}")
+                            self.create_directory(trash_dir)
+                        logger.info(f"移动到回收站: {name}")
+                        self.move_item(dst_dir, trash_dir, name)
+                else:  # delete
+                    logger.info(f"处理同步删除 - 目录: {dst_dir}")
+                    logger.info(f"处理删除项目: {name}")
+                    logger.info(f"直接删除项目: {name}")
+                    self._directory_operation("remove", dir=dst_dir, names=[name])
+        except Exception as e:
+            logger.error(f"处理同步删除失败: {str(e)}")
+
+    def _get_trash_dir(self, dst_dir: str) -> Optional[str]:
+        """获取回收站目录路径"""
+        storage_list = self.get_storage_list()
+        for mount_path in storage_list:
+            if dst_dir.startswith(mount_path):
+                return f"{mount_path}/trash{dst_dir[len(mount_path):]}"
+        return None
+
+    def close(self):
+        """关闭连接"""
+        try:
+            if hasattr(self, 'connection') and self.connection:
+                self.connection.close()
+                logger.debug("连接已关闭")
+        except Exception as e:
+            logger.error(f"关闭连接时发生错误: {str(e)}")
+
+    def get_file_info(self, path: str) -> Optional[Dict]:
+        """获取文件信息，包括大小和修改时间"""
+        response = self._directory_operation("get", path=path)
+        if response and response.get("message") == "success":
+            return response.get("data", {})
+        return None
+
+    def _copy_item_with_check(self, src_dir: str, dst_dir: str, item: Dict, exclude_dirs: str = None) -> bool:
+        """复制项目并进行检查"""
+        try:
+            item_name = item.get('name')
+            if not item_name:
+                logger.error("项目名称为空")
+                return False
+
+            logger.info(f"处理项目: {item_name}")
+            if src_dir == exclude_dirs:
+                logger.info(f"排除目录: {src_dir}, 跳过同步")
+                return True
+
+            # 如果是目录，递归处理
+            if item.get('is_dir', False):
+                src_subdir = f"{src_dir}/{item_name}".replace('//', '/')
+                dst_subdir = f"{dst_dir}/{item_name}".replace('//', '/')
+
+                # 确保目标子目录存在
+                if not self.is_path_exists(dst_subdir):
+                    logger.info(f"创建目标子目录: {dst_subdir}")
+                    if not self.create_directory(dst_subdir):
+                        return False
+                else:
+                    logger.info(f"文件夹【{dst_subdir}】已存在，跳过创建")
+
+                # 递归复制子目录
+                return self._recursive_copy(src_subdir, dst_subdir, exclude_dirs)
+            else:
+                # 处理文件
+                dst_path = f"{dst_dir}/{item_name}".replace('//', '/')
+
+                # 检查目标文件是否存在
+                if not self.is_path_exists(dst_path):
+                    logger.info(f"复制文件: {item_name}")
+                    return self.copy_item(src_dir, dst_dir, item_name)
+                else:
+                    # 获取源文件和目标文件信息
+                    src_size = item.get("size")
+                    dst_info = self.get_file_info(dst_path)
+
+                    if not dst_info:
+                        logger.error(f"获取目标文件信息失败: {dst_path}")
+                        return False
+
+                    dst_size = dst_info.get("size")
+
+                    # 比较文件大小
+                    if src_size == dst_size:
+                        logger.info(f"文件【{item_name}】已存在且大小相同，跳过复制")
+                        return True
+                    else:
+                        # 比较修改时间
+                        src_modified = parse_time_and_adjust_utc(item.get("modified"))
+                        dst_modified = parse_time_and_adjust_utc(dst_info.get("modified"))
+
+                        if src_modified and dst_modified and dst_modified > src_modified:
+                            logger.info(f"文件【{item_name}】目标文件修改时间晚于源文件，跳过复制")
+                            return True
+                        else:
+                            logger.info(f"文件【{item_name}】存在变更，删除并重新复制")
+                            # 删除旧文件
+                            if not self._directory_operation("remove", dir=dst_dir, names=[item_name]):
+                                logger.error(f"删除目标文件失败: {dst_path}")
+                                return False
+                            # 复制新文件
+                            return self.copy_item(src_dir, dst_dir, item_name)
+
+        except Exception as e:
+            logger.error(f"复制项目时发生错误: {str(e)}")
+            return False
+
+
+def get_dir_pairs_from_env() -> List[str]:
+    """从环境变量获取目录对列表"""
+    dir_pairs_list = []
+
+    # 获取主DIR_PAIRS
+    if dir_pairs := os.environ.get("DIR_PAIRS"):
+        dir_pairs_list.extend(dir_pairs.split(";"))
+
+    # 获取DIR_PAIRS1到DIR_PAIRS50
+    for i in range(1, 51):
+        if dir_pairs := os.environ.get(f"DIR_PAIRS{i}"):
+            dir_pairs_list.extend(dir_pairs.split(";"))
+
+    return dir_pairs_list
+
+
+def main(dir_pairs: str = None, sync_del_action: str = None, exclude_dirs: str = None):
+    """主函数，用于命令行执行"""
+    code_souce()
+    xiaojin()
+
+    logger.info("开始执行同步任务")
+
+    # 从环境变量获取配置
+    base_url = os.environ.get("BASE_URL")
+    username = os.environ.get("USERNAME")
+    password = os.environ.get("PASSWORD")
+    if sync_del_action:
+        sync_delete_action = sync_del_action
+    else:
+        sync_delete_action = os.environ.get("SYNC_DELETE_ACTION", "none")
+
+    if not exclude_dirs:
+        exclude_dirs = os.environ.get("EXCLUDE_DIRS")
+
+    if not all([base_url, username, password]):
+        logger.error("必要的环境变量未设置")
+        return
+
+    logger.info(f"配置信息 - URL: {base_url}, 用户名: {username}, 删除动作: {sync_delete_action}")
+
+    # 创建AlistSync实例
+    alist_sync = AlistSync(base_url, username, password, sync_delete_action)
+
+    try:
+        # 获取同步目录对
+        dir_pairs_list = []
+        if dir_pairs:
+            dir_pairs_list.extend(dir_pairs.split(";"))
+        else:
+            dir_pairs_list = get_dir_pairs_from_env()
+
+        logger.info(f"")
+        logger.info(f"")
+        num = 1
+        for pair in dir_pairs_list:
+            logger.info(f"No.{num:02d}【{pair}】")
+            num += 1
+
+        # 执行同步
+        i = 1
+        for pair in dir_pairs_list:
+            src_dir, dst_dir = pair.split(":")
+            logger.info(f"")
+            logger.info(f"")
+            logger.info(f"")
+            logger.info(f"")
+            logger.info(f"")
+            logger.info(f"第 [{i:02d}] 个 同步目录【{src_dir.strip()}】---->【 {dst_dir.strip()}】")
+            logger.info(f"")
+            logger.info(f"")
+            i += 1
+            alist_sync.sync_directories(src_dir.strip(), dst_dir.strip(), exclude_dirs)
+
+        logger.info("所有同步任务执行完成")
+    except Exception as e:
+        logger.error(f"执行同步任务时发生错误: {str(e)}")
+    finally:
+        alist_sync.close()
+        logger.info("关闭连接，任务结束")
+
+
+def code_souce():
+    logger.info("如果好用，请Star！非常感谢！ https://gitee.com/xjxjin/alist-sync")
+    logger.info("如果好用，请Star！非常感谢！ https://github.com/xjxjin/alist-sync")
+    logger.info("如果好用，请Star！非常感谢！ https://hub.docker.com/r/xjxjin/alist-sync")
 
 
 def xiaojin():
@@ -56,331 +513,6 @@ def xiaojin():
     """
     logger.info(pt)
 
-def get_dir_pairs_from_env():
-    # 初始化列表来存储环境变量的值
-    dir_pairs_list = []
-
-    # 尝试从环境变量中获取DIR_PAIRS的值
-    dir_pairs = os.environ.get("DIR_PAIRS")
-    # 检查DIR_PAIRS是否不为空
-    logger.info("本次同步目录有：")
-    num=1
-    if dir_pairs:
-        # 将DIR_PAIRS的值添加到列表中
-        dir_pairs_list.append(dir_pairs)
-        logger.info(f"No.{num:02d}【{dir_pairs}】")
-        num += 1
-
-    # 循环尝试获取DIR_PAIRS1到DIR_PAIRS50的值
-    for i in range(1, 51):
-        # 构造环境变量名
-        env_var_name = f"DIR_PAIRS{i}"
-        # 尝试获取环境变量的值
-        env_var_value = os.environ.get(env_var_name)
-        # 如果环境变量的值不为空，则添加到列表中
-        if env_var_value:
-            dir_pairs_list.append(env_var_value)
-            logger.info(f"No.{num:02d}【{env_var_value}】")
-            num += 1
-
-    return dir_pairs_list
-
-
-def create_connection(base_url):
-    # 使用正则表达式解析URL，获取主机名和端口
-    match = re.match(r"(?:http[s]?://)?([^:/]+)(?::(\d+))?", base_url)
-    host = match.group(1)
-    port_part = match.group(2)
-    port = int(port_part) if port_part else (80 if "http://" in base_url else 443)
-
-    # 根据URL的协议类型创建HTTP或HTTPS连接
-    return http.client.HTTPSConnection(host, port) if base_url.startswith("https://") else http.client.HTTPConnection(
-        host, port)
-
-
-def make_request(connection, method, path, headers=None, payload=None):
-    # 发送HTTP请求并返回JSON解析后的响应内容
-    try:
-        connection.request(method, path, body=payload, headers=headers)
-        response = connection.getresponse()
-        return json.loads(response.read().decode("utf-8"))
-    except Exception as e:
-        logger.error(f"请求失败: {e}")
-        return None
-
-
-def get_token(connection, path, username, password):
-    # 获取认证token
-    payload = json.dumps({"username": username, "password": password})
-    headers = {
-        "User-Agent": "Apifox/1.0.0 (https://apifox.com)",
-        "Content-Type": "application/json"
-    }
-    response = make_request(connection, "POST", path, headers, payload)
-    if response:
-        return response["data"]["token"]
-    else:
-        logger.error("获取token失败")
-        return None
-
-
-def directory_operation(connection, token, operation, **kwargs):
-    # (connection, token, "mkdir", directory_path, path=directory_path)
-    # 一个通用函数，用于执行目录操作
-    headers = {
-        "Authorization": token,
-        "User-Agent": "Apifox/1.0.0 (https://apifox.com)",
-        "Content-Type": "application/json"
-    }
-    payload = json.dumps(kwargs)
-    path = f"/api/fs/{operation}"  # 构建API路径
-    response = make_request(connection, "POST", path, headers, payload)
-    return response
-
-
-def get_directory_contents(connection, token, directory_path):
-    # 获取目录下的文件和文件夹列表
-    return directory_operation(connection, token, "list", path=directory_path).get("data", [])
-
-
-def create_directory(connection, token, directory_path):
-    # 创建新文件夹
-    response = directory_operation(connection, token, "mkdir", path=directory_path)
-    if response:
-        logger.info(f"文件夹【{directory_path}】创建成功")
-    else:
-        logger.error("文件夹创建失败")
-
-
-def copy_item(connection, token, src_dir, dst_dir, item_name):
-    # 复制文件或文件夹
-    response = directory_operation(connection, token, "copy", src_dir=src_dir, dst_dir=dst_dir, names=[item_name])
-    if response:
-        logger.info(f"文件【{item_name}】复制成功")
-    else:
-        logger.error("文件复制失败")
-
-
-def move_item(connection, token, src_dir, dst_dir, item_name):
-    # 移动文件或文件夹
-    response = directory_operation(connection, token, "move", src_dir=src_dir, dst_dir=dst_dir, names=[item_name])
-    if response:
-        logger.info(f"文件从【{src_dir}/{item_name}】移动到【{dst_dir}/{item_name}】移动成功")
-    else:
-        logger.error("文件移动失败")
-
-
-def is_path_exists(connection, token, path):
-    # 判断路径是否存在，包括文件和文件夹
-    response = directory_operation(connection, token, "get", path=path)
-    return response and response.get("message", "") == "success"
-
-
-def is_directory_size(connection, token, directory_path):
-    # 判断文件大小
-    response = directory_operation(connection, token, "get", path=directory_path)
-    return response["data"]["size"]
-
-def is_directory_modified_date(connection, token, directory_path):
-    # 获取文件修改时间
-    response = directory_operation(connection, token, "get", path=directory_path)
-    return response["data"]["modified"]
-
-def directory_remove(connection, token, directory_path, file_name):
-    # 删除文件
-    response = directory_operation(connection, token, "remove", dir=directory_path, names=[file_name])
-    if response.get("message", "") == "success":
-        logger.info(f"文件【{directory_path}/{file_name}】删除成功")
-    else:
-        logger.error(f"文件【{directory_path}/{file_name}】删除失败")
-
-
-def get_storage_list(connection, token):
-    # 列出存储列表
-    headers = {
-        "Authorization": token,
-        "User-Agent": "Apifox/1.0.0 (https://apifox.com)",
-        "Content-Type": "application/json"
-    }
-    response = make_request(connection, "GET", "/api/admin/storage/list", headers)
-    if response:
-        storage_list = response["data"]["content"]
-        return [list["mount_path"] for list in storage_list]
-    else:
-        logger.error("获取存储列表失败")
-        return None
-
-def parse_time_and_adjust_utc(date_str):
-    """
-    使用正则表达式解析时间字符串，如果是UTC格式（包含'Z'）则加8小时
-    """
-    # 匹配ISO 8601格式类似 "2024-12-09T13:17:45.82Z" 或者 "2024-12-09T21:17:28.179+08:00" 等格式
-    iso_8601_pattern = r'(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(\.\d+)?([+-]\d{2}:\d{2}|Z)?'
-    match_iso = re.match(iso_8601_pattern, date_str)
-    if match_iso:
-        year, month, day, hour, minute, second, microsecond, timezone = match_iso.groups()
-        if microsecond:
-            microsecond = int(float(microsecond) * 1000000)  # 将小数形式的微秒转换为整数
-        else:
-            microsecond = 0
-        dt = datetime(int(year), int(month), int(day), int(hour), int(minute), int(second), microsecond)
-        if timezone == "Z":
-            dt = dt + timedelta(hours=8)  # 如果是UTC时间，增加8小时
-        elif timezone:
-            # 处理其他时区偏移量（这里暂简单处理时区转换，实际可能更复杂）
-            sign = 1 if timezone[0] == "+" else -1
-            hours = int(timezone[1:3])
-            minutes = int(timezone[4:6])
-            offset = timedelta(hours=sign * hours, minutes=sign * minutes)
-            dt = dt - offset
-        return dt
-
-def recursive_copy(src_dir, dst_dir, connection, token, sync_delete=False):
-    # 递归复制文件夹内容
-    global dst_contents
-    try:
-        src_contents = get_directory_contents(connection, token, src_dir)["content"]
-    except Exception as e:
-        logger.error(f"获取目录【{src_dir}】失败: {e}")
-        return
-    # 空目录跳过
-    if not src_contents:
-        return
-
-    # 因为开启了递归，所以需要先判断源目录是否存在多余文件，来确定是否移动或者删除文件
-    # 如果启用了同步删除，删除目标目录中不存在于源目录的文件
-    if sync_delete:
-        dst_list = []
-        try:
-            dst_contents = get_directory_contents(connection, token, dst_dir)["content"]
-            for dst_item in dst_contents:
-                item_name = dst_item["name"]
-                dst_list.append(item_name)
-        except Exception as e:
-            logger.error(f"获取目录【{dst_dir}】失败: {e}")
-
-        src_list = []
-        for item in src_contents:
-            item_name = item["name"]
-            # 添加源目录下文件名称
-            src_list.append(item_name)
-
-        # 获取目标目录有的文件，但是源目录没有的文件
-        diff_list = list(set(dst_list) - set(src_list))
-        if len(diff_list) > 0:
-            for dst_item in dst_contents:
-                item_name = dst_item["name"]
-
-                if item_name in diff_list:
-                    # 如果是移动判断源文件夹是否存在
-                    if sync_delete_action == "move":
-                        # 拼接移动文件路径
-                        # 拼接到目标目录的trash下，获取文件夹所在的存储路径名称,拼接移动文件路径
-                        trash_dir = ""
-                        storage_list = get_storage_list(connection, token)
-                        for mount_path in storage_list:
-                            if dst_dir.startswith(mount_path):
-                                c = dst_dir[len(mount_path):]
-                                trash_dir = f"{mount_path}/trash{c}"
-                                break
-
-                        # 判断文件夹是否存在，不存在就创建文件夹
-                        if not is_path_exists(connection, token, trash_dir):
-                            create_directory(connection, token, trash_dir)
-                        move_item(connection, token, dst_dir, trash_dir, item_name)
-
-                    if sync_delete_action == "delete":
-                        directory_remove(connection, token, dst_dir, item_name)
-
-    # 开始复制文件操作
-    for item in src_contents:
-        item_name = item["name"]
-        item_path = f"{src_dir}/{item_name}"
-        dst_item_path = f"{dst_dir}/{item_name}"
-
-        # 添加源目录下文件名称
-        if item["is_dir"]:
-            if not is_path_exists(connection, token, dst_item_path):
-                create_directory(connection, token, dst_item_path)
-            else:
-                logger.info(f"文件夹【{dst_item_path}】已存在，跳过创建")
-
-            # 递归复制文件夹
-            recursive_copy(item_path, dst_item_path, connection, token, sync_delete)
-        else:
-            if not is_path_exists(connection, token, dst_item_path):
-                copy_item(connection, token, src_dir, dst_dir, item_name)
-            else:
-                src_size = item["size"]
-                dst_size = is_directory_size(connection, token, dst_item_path)
-                if src_size == dst_size:
-                    logger.info(f"文件【{item_name}】已存在，跳过复制")
-                else:
-                    # 获取文件修改时间
-                    src_modified_date = item["modified"]
-                    dst_modified_date = is_directory_modified_date(connection, token, dst_item_path)
-                    src_date = parse_time_and_adjust_utc(src_modified_date)
-                    dst_date = parse_time_and_adjust_utc(dst_modified_date)
-
-                    if dst_date > src_date:
-                        logger.info(f"文件【{item_name}】目标文件修改时间晚于源文件，跳过复制")
-                    else:
-                        logger.info(f"文件【{item_name}】文件存在变更，删除文件")
-                        directory_remove(connection, token, dst_dir, item_name)
-                        copy_item(connection, token, src_dir, dst_dir, item_name)
-
-
-def main():
-    xiaojin()
-    logger.info(f"同步任务运行开始 {datetime.now()}")
-    conn = create_connection(base_url)
-    token = get_token(conn, "/api/auth/login", username, password)
-
-    dir_pairs_list = get_dir_pairs_from_env()
-    i = 0
-    # 遍历dir_pairs_list中的每个值
-    for value in dir_pairs_list:
-        # 将当前遍历到的值赋给变量dir_pairs
-        dir_pairs = value
-        # 执行需要使用dir_pairs的代码
-        # 例如，打印dir_pairs的值
-        # logger.info(dir_pairs)
-
-        data_list = dir_pairs.split(";")
-
-        for item in data_list:
-            i = i + 1
-            pair = item.split(":")
-            try:
-                if len(pair) == 2:
-                    src_dir, dst_dir = pair[0], pair[1]
-                    logger.info(f"")
-                    logger.info(f"")
-                    logger.info(f"")
-                    logger.info(f"")
-                    logger.info(f"")
-                    logger.info(f"第 [{i:02d}] 个 同步目录【{src_dir}】---->【 {dst_dir}】")
-                    logger.info(f"")
-                    logger.info(f"")
-                    if not is_path_exists(conn, token, dst_dir):
-                        create_directory(conn, token, dst_dir)
-
-                    # logger.info(f"同步源目录: {src_dir}, 到目标目录: {dst_dir}")
-                    recursive_copy(src_dir, dst_dir, conn, token, sync_delete)
-
-                else:
-                    logger.error(f"源目录或目标目录不存在: {item}")
-            except Exception as e:
-                logger.error(f"同步目录【{item}】失败: {e}")
-
-    conn.close()
-    logger.info(f"同步任务运行结束 {datetime.now()}")
-
 
 if __name__ == '__main__':
-    # ... 解析命令行参数...
-
-    # 检查CRON_SCHEDULE是否为空或者为null
-    if not cron_schedule or cron_schedule is None or cron_schedule == "None":
-        # logger.info("CRON_SCHEDULE为空，将执行一次同步任务。")
-        main()  # 执行一次同步任务
+    main()

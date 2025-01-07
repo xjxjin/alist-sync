@@ -1,9 +1,6 @@
 import http.client
 import json
 import re
-from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.triggers.cron import CronTrigger
-import time
 from datetime import datetime,timedelta
 import os
 import logging
@@ -22,13 +19,6 @@ cron_schedule = os.environ.get("CRON_SCHEDULE")
 
 sync_delete_action = os.environ.get("SYNC_DELETE_ACTION", "none").lower()
 sync_delete = sync_delete_action == "move" or sync_delete_action == "delete"
-
-if cron_schedule:
-    # 创建一个后台调度器实例
-    scheduler = BackgroundScheduler()
-
-    # 创建一个CronTrigger实例
-    trigger = CronTrigger.from_crontab(cron_schedule)
 
 
 def xiaojin():
@@ -394,16 +384,3 @@ if __name__ == '__main__':
     if not cron_schedule or cron_schedule is None or cron_schedule == "None":
         # logger.info("CRON_SCHEDULE为空，将执行一次同步任务。")
         main()  # 执行一次同步任务
-    else:
-        # 添加任务到调度器，使用创建的CronTrigger实例
-        scheduler.add_job(main, trigger=trigger)
-
-        # 开始调度器
-        scheduler.start()
-        try:
-            # 这会阻塞主线程，但调度器在后台线程中运行
-            while True:
-                time.sleep(1)
-        except (KeyboardInterrupt, SystemExit):
-            # 如果主线程被中断（例如用户按Ctrl+C），则关闭调度器
-            scheduler.shutdown()

@@ -238,17 +238,16 @@ class AlistSync:
                 src_contents = self.get_directory_contents(src_dir)
                 if not src_contents:
                     logger.info(f"源目录为空或获取内容失败: {src_dir}")
-                    return True
+                    # return True
 
                 if self.sync_delete:
                     self._handle_sync_delete(src_dir, dst_dir, src_contents)
-
-                for item in src_contents:
-                    if not self._copy_item_with_check(src_dir, dst_dir, item, exclude_dirs):
-                        logger.error(f"复制项目失败: {item.get('name', '未知项目')}")
-                        return False
-
-                logger.info(f"递归复制完成 - 源目录: {src_dir}, 目标目录: {dst_dir}")
+                if src_contents:
+                    for item in src_contents:
+                        if not self._copy_item_with_check(src_dir, dst_dir, item, exclude_dirs):
+                            logger.error(f"复制项目失败: {item.get('name', '未知项目')}")
+                            return False
+                    logger.info(f"递归复制完成 - 源目录: {src_dir}, 目标目录: {dst_dir}")
                 return True
         except Exception as e:
             logger.error(f"递归复制失败: {str(e)}")
@@ -258,10 +257,19 @@ class AlistSync:
         """处理同步删除逻辑"""
         try:
             dst_contents = self.get_directory_contents(dst_dir)
-            src_names = {item["name"] for item in src_contents}
-            dst_names = {item["name"] for item in dst_contents}
+            src_names = {}
+            if src_contents:
+                src_names = {item["name"] for item in src_contents}
 
-            to_delete = dst_names - src_names
+            dst_names = {}
+            if dst_contents:
+                dst_names = {item["name"] for item in dst_contents}
+
+            if src_names:
+                to_delete = dst_names - src_names
+            else:
+                to_delete = dst_names
+
             if not to_delete:
                 logger.info("没有需要删除的项目")
                 return
@@ -465,8 +473,9 @@ def main(dir_pairs: str = None, sync_del_action: str = None, exclude_dirs: str =
 
 
 def code_souce():
-    logger.info("国内访问: https://gitee.com/xjxjin/alist-sync")
-    logger.info("国际访问: https://github.com/xjxjin/alist-sync")
+    logger.info("如果好用，请Star！非常感谢！ https://gitee.com/xjxjin/alist-sync")
+    logger.info("如果好用，请Star！非常感谢！ https://github.com/xjxjin/alist-sync")
+    logger.info("如果好用，请Star！非常感谢！ https://hub.docker.com/r/xjxjin/alist-sync")
 
 
 def xiaojin():
