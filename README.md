@@ -27,6 +27,8 @@
 - 📝 详细的同步日志记录
 - 🔒 支持用户认证和密码管理
 - 🐳 支持 Docker 部署
+- 🐉 支持青龙面板定时任务
+
 
 
 
@@ -81,6 +83,7 @@ http://localhost:52441
 - 服务地址：Alist 服务的访问地址
 - 用户名：Alist 管理员账号
 - 密码：Alist 管理员密码
+- 令牌：Alist 令牌
 
 ### 2. 同步任务配置
 
@@ -124,9 +127,9 @@ http://localhost:52441
 ## 配置文件说明
 
 所有配置文件存储在 `data/config` 目录：
-- `base_config.json`：基础连接配置
-- `sync_config.json`：同步任务配置
-- `users_config.json`：用户认证配置
+- `alist_sync_base_config.json`：基础连接配置
+- `alist_sync_sync_config.json`：同步任务配置
+- `alist_sync_users_config.json`：用户认证配置
 
 日志文件存储在 `data/log` 目录：
 - `alist_sync.log`：当前日志
@@ -140,7 +143,47 @@ http://localhost:52441
 4. 建议先测试连接再保存配置
 5. 可以通过日志查看同步执行情况
 
+## 青龙使用
+
+<details>
+    <summary>点击这里展开/折叠内容</summary>
+
+### 参数
+
+```bash
+BASE_URL: 服务器基础URL(结尾不带/)
+USERNAME: 用户名
+PASSWORD: 密码
+TOKEN: 令牌
+DIR_PAIRS: 源目录和目标目录的配对(源目录和目标目录的配对，用分号隔开，冒号分隔)
+CRON_SCHEDULE: 调度日期，参考cron语法   "分 时 日 月 周" 非必填，不填为一次调度
+--以下参数用于目标目录有，但源目录不存在的文件处理，可选参数--
+SYNC_DELETE_ACTION: 同步删除动作，可选值为move,delete。
+当SYNC_DELETE_ACTION设置为move时，文件将移动到trash目录下；比如存储器目录为 /dav/quark，则源目录多余的文件将会移动到/dav/quark/trash 目录下
+EXCLUDE_DIRS: 排除目录
+```
+
+国内执行
+
+```bash
+ql raw https://gitee.com/xjxjin/alist-sync/raw/main/alist-sync-ql.py
+```
+国际执行
+
+```bash
+ql raw https://github.com/xjxjin/alist-sync/raw/main/alist-sync-ql.py
+```
+
+</details>
+
 ## 更新记录
+
+### v1.0.7
+- 2025-01-08
+- 新增令牌验证
+- 新增导入导出配置文件功能
+- 修复登录后无法显示存储器下拉列表
+- 修改配置文件以 alist_sync开头
 
 ### v1.0.6
 - 2025-01-07
@@ -149,18 +192,64 @@ http://localhost:52441
 
 ### v1.0.5
 - 2025-01-05
-- 初始版本发布
+- 初始UI版本发布
 - 支持基础的同步功能
 - 支持 Web 界面管理
+
+
+### 2024-12-16更新
+- 当源文件和目标文件大小不一致时，如果目标文件修改时间晚于源文件，则跳过覆盖
+
+### 2024-11-13更新
+
+- 修复删除目标目录多余文件重复删除问题 
+- 优化移动目标目录多余文件到存储器根目录
+- 优化设置多目录，一个目录失败导致所有目录失败问题
+
+
+### 2024-09-06更新
+- 新增参数，处理目标目录有多的文件或者文件夹，但是源目录没有的处理方式,功能由【[RWDai](https://github.com/RWDai)】小哥提供 
+- none 什么也不做 
+- move 移动到目标目录下的trash目录 
+- delete 真实删除 
+
+### 2024-06-29更新
+- 新增DIR_PAIRS参数个数,最多到50，参数内容和之前一致(源目录和目标目录的配对(源目录和目标目录的配对，用分号隔开，冒号分隔)),参数格式为
+- ```bash
+    DIR_PAIRS
+    DIR_PAIRS1
+    DIR_PAIRS2
+    DIR_PAIRS3
+    .....
+    DIR_PAIRS50
+    ```
+  
+### 2024-05-23更新
+- 新增青龙调度
+
+### 2024-05-13更新
+- 1.新增文件存在判断逻辑
+- 文件名称 
+- 文件大小
+- 2.CRON_SCHEDULE 变更为参数可选
+- 当参数不传变更为一次调度，可以配合青龙远程调度
+
 
 ## 问题反馈
 
 如果您在使用过程中遇到任何问题，请提交 Issue。
 
+
+## 警告
+* **在两个目录相互备份的情况下使用删除功能时请格外谨慎。可能导致文件永久丢失，后果自负。**
+
+
+
 ## Tips
 - 前端页面均为 AI 生成，使用过程中可能有小瑕疵，欢迎前端大神提交代码修复
 - 初次使用，保存基础配置后，可以点击添加任务，刷新源存储器和目标存储器下拉列表
-- 如果忘记密码，请删除data/config/users_config.json 文件，会默认变成 admin/admin
+- 如果忘记密码，请删除data/config/alist_sync_users_config.json 文件，会默认变成 admin/admin
+- 令牌从 Alist 的 管理-设置-其他 获取，获取后不要重置令牌
 - 有其他新增功能欢迎提交 Issue。
 - 文件同步填写全目录，参照最后面图片
 ## License
@@ -173,3 +262,9 @@ MIT License
 
 ## 文件同步
 <img src="https://raw.githubusercontent.com/xjxjin/alist-sync/main/static/images/文件同步.png" width="700" alt="文件同步">
+
+## 令牌获取
+<img src="https://raw.githubusercontent.com/xjxjin/alist-sync/main/static/images/令牌.png" width="700" alt="令牌获取">
+
+## 查看任务进度
+<img src="https://raw.githubusercontent.com/xjxjin/alist-sync/main/static/images/查看任务进度.jpg" width="700" alt="查看任务进度">
