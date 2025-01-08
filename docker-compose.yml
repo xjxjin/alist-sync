@@ -8,7 +8,6 @@ services:
     ports:
       - "52441:52441"
     volumes:
-      - ./config_data:/app/config_data
-      - ./config_log:/app/config_log
+      - /DATA/AppData/alist-sync-web/data:/app/data
     environment:
       - TZ=Asia/Shanghai 

@@ -79,15 +79,16 @@ def parse_time_and_adjust_utc(date_str: str) -> datetime:
 
 
 class AlistSync:
-    def __init__(self, base_url: str, username: str, password: str, sync_delete_action: str = "none"):
+    def __init__(self, base_url: str, username: str = None, password: str = None, token: str = None,
+                 sync_delete_action: str = "none"):
         """初始化AlistSync类"""
         self.base_url = base_url
         self.username = username
         self.password = password
+        self.token = token  # 添加token属性
         self.sync_delete_action = sync_delete_action.lower()
         self.sync_delete = self.sync_delete_action in ["move", "delete"]
         self.connection = self._create_connection()
-        self.token = None
 
     def _create_connection(self) -> Union[http.client.HTTPConnection, http.client.HTTPSConnection]:
         """创建HTTP(S)连接"""
@@ -124,6 +125,15 @@ class AlistSync:
 
     def login(self) -> bool:
         """登录并获取token"""
+        # 如果已有token，直接返回True
+        if self.get_setting():
+            return True
+
+        # 否则使用用户名密码登录
+        if not self.username or not self.password:
+            logger.error("未提供token或用户名密码")
+            return False
+
         payload = json.dumps({"username": self.username, "password": self.password})
         headers = {
             "User-Agent": "Apifox/1.0.0 (https://apifox.com)",
@@ -134,6 +144,25 @@ class AlistSync:
             self.token = response["data"]["token"]
             return True
         logger.error("获取token失败")
+        return False
+
+    def get_setting(self) -> bool:
+        """验证令牌正确性"""
+        headers = {
+            "User-Agent": "Apifox/1.0.0 (https://apifox.com)",
+            "Content-Type": "application/json",
+            "Authorization": self.token
+        }
+        response = self._make_request("GET", "/api/admin/setting/list", headers)
+        if response and response.get("data", {}):
+            token_value = None
+            for item in response["data"]:
+                if item["key"] == "token":
+                    token_value = item["value"]
+                    break
+            if self.token == token_value:
+                return True
+        logger.error("令牌填写错误")
         return False
 
     def _directory_operation(self, operation: str, **kwargs) -> Optional[Dict]:
@@ -417,6 +446,8 @@ def main(dir_pairs: str = None, sync_del_action: str = None, exclude_dirs: str =
     base_url = os.environ.get("BASE_URL")
     username = os.environ.get("USERNAME")
     password = os.environ.get("PASSWORD")
+    token = os.environ.get("TOKEN")  # 添加token环境变量
+
     if sync_del_action:
         sync_delete_action = sync_del_action
     else:
@@ -425,14 +456,19 @@ def main(dir_pairs: str = None, sync_del_action: str = None, exclude_dirs: str =
     if not exclude_dirs:
         exclude_dirs = os.environ.get("EXCLUDE_DIRS")
 
-    if not all([base_url, username, password]):
-        logger.error("必要的环境变量未设置")
+    if not base_url:
+        logger.error("BASE_URL环境变量未设置")
+        return
+
+    # 修改验证逻辑
+    if not token and not (username and password):
+        logger.error("需要设置TOKEN或者同时设置USERNAME和PASSWORD")
         return
 
     logger.info(f"配置信息 - URL: {base_url}, 用户名: {username}, 删除动作: {sync_delete_action}")
 
-    # 创建AlistSync实例
-    alist_sync = AlistSync(base_url, username, password, sync_delete_action)
+    # 创建AlistSync实例时添加token参数
+    alist_sync = AlistSync(base_url, username, password, token, sync_delete_action)
 
     try:
         # 获取同步目录对

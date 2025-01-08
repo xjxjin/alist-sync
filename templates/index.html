@@ -239,7 +239,7 @@
           <div class="layui-form-item">
             <label class="layui-form-label">用户名</label>
             <div class="layui-input-inline">
-              <input type="text" name="username" required lay-verify="required" placeholder="请输入用户名"
+              <input type="text" name="username" placeholder="请输入用户名"
                 autocomplete="off" class="layui-input">
             </div>
           </div>
@@ -247,9 +247,18 @@
           <div class="layui-form-item">
             <label class="layui-form-label">密码</label>
             <div class="layui-input-inline">
-              <input type="password" name="password" required lay-verify="required" placeholder="请输入密码"
+              <input type="password" name="password" placeholder="请输入密码"
                 autocomplete="off" class="layui-input">
             </div>
+          </div>
+
+          <div class="layui-form-item">
+            <label class="layui-form-label">令牌</label>
+            <div class="layui-input-inline">
+              <input type="password" name="token" placeholder="请输入令牌"
+                autocomplete="off" class="layui-input">
+            </div>
+            <div class="layui-form-mid layui-text-em">用户名密码和令牌至少填写一项</div>
           </div>
 
           <div class="layui-form-item">
@@ -496,6 +505,85 @@
         layer = layui.layer,
         laydate = layui.laydate,
         $ = layui.$;
+
+    // 修改页面加载时的初始化代码
+    $(document).ready(function() {
+      // 为初始任务绑定事件
+      bindSyncDelActionEvents($('.task-item:first'));
+      bindCheckNextTimeEvent($('.task-item:first'));
+
+      // 先加载存储器列表
+      loadStorages().then(() => {
+        // 加载完存储器列表后再加载配置
+        loadConfigs();
+      }).catch(error => {
+        console.error('加载存储器列表失败:', error);
+        layer.msg('加载存储器列表失败: ' + (error.message || '未知错误'));
+      });
+    });
+
+    // 修改 loadStorages 函数
+    async function loadStorages() {
+      try {
+        const storagesRes = await $.ajax({
+          url: '/api/storages',
+          method: 'GET'
+        });
+
+        if(storagesRes.code === 200) {
+          window.storagesList = storagesRes.data;
+          await updateAllTasksStorages();
+          return storagesRes.data;
+        } else {
+          throw new Error(storagesRes.message || '获取存储器列表失败');
+        }
+      } catch(error) {
+        console.error('加载存储器列表失败:', error);
+        throw error;
+      }
+    }
+
+    // 修改 loadConfigs 函数
+    async function loadConfigs() {
+      $('#loading').show();
+      try {
+        // 加载基础连接参数
+        console.log('正在加载基础连接参数...');
+        const baseConfigRes = await $.ajax({
+          url: '/api/get-base-config',
+          method: 'GET'
+        });
+
+        console.log('基础连接参数加载结果:', baseConfigRes);
+        if(baseConfigRes.code === 200) {
+          // 填充基础连接参数
+          $('input[name="baseUrl"]').val(baseConfigRes.data.baseUrl);
+          $('input[name="username"]').val(baseConfigRes.data.username);
+          $('input[name="password"]').val(baseConfigRes.data.password);
+          $('input[name="token"]').val(baseConfigRes.data.token);
+
+          // 如果有连接参数，更新测试按钮状态
+          if(baseConfigRes.data.baseUrl &&
+             (baseConfigRes.data.token || (baseConfigRes.data.username && baseConfigRes.data.password))) {
+            $('#testConnect').removeClass('layui-btn-gray').addClass('layui-btn-normal');
+          }
+        }
+
+        // 加载同步配置
+        const syncRes = await $.ajax({
+          url: '/api/get-sync-config',
+          method: 'GET'
+        });
+
+        // ... 其他同步配置加载代码保持不变 ...
+
+      } catch(error) {
+        console.error('加载配置失败:', error);
+        layer.msg('加载配置失败: ' + (error.message || '未知错误'));
+      } finally {
+        $('#loading').hide();
+      }
+    }
 
     // 加载存储器列表
     async function loadStorages() {
@@ -834,16 +922,23 @@
     var $baseUrl = $('input[name="baseUrl"]'),
         $username = $('input[name="username"]'),
         $password = $('input[name="password"]'),
+        $token = $('input[name="token"]'),
         $testBtn = $('#testConnect');
 
     $('input[name]').on('input', function(){
-      var hasAllRequired = $baseUrl.val() && $username.val() && $password.val();
-      $testBtn.toggleClass('layui-btn-gray', !hasAllRequired);
+      var hasBaseUrl = $baseUrl.val();
+      var hasCredentials = ($username.val() && $password.val()) || $token.val();
+      $testBtn.toggleClass('layui-btn-gray', !(hasBaseUrl && hasCredentials));
     });
 
     $testBtn.on('click', function(){
-      if(!$baseUrl.val() || !$username.val() || !$password.val()){
-        layer.msg('服务地址、用户名和密码均为必填项');
+      if(!$baseUrl.val()){
+        layer.msg('服务地址为必填项');
+        return;
+      }
+
+      if(!$token.val() && (!$username.val() || !$password.val())){
+        layer.msg('请填写用户名和密码，或者填写令牌');
         return;
       }
 
@@ -854,7 +949,8 @@
       var data = {
         baseUrl: $baseUrl.val(),
         username: $username.val(),
-        password: $password.val()
+        password: $password.val(),
+        token: $token.val()
       };
 
       layer.load(1);
@@ -904,7 +1000,8 @@
         data: JSON.stringify({
           baseUrl: data.baseUrl,
           username: data.username,
-          password: data.password
+          password: data.password,
+          token: data.token
         }),
         success: function(res){
           layer.closeAll('loading');
@@ -1109,9 +1206,11 @@
             $('input[name="baseUrl"]').val(baseConfigRes.data.baseUrl);
             $('input[name="username"]').val(baseConfigRes.data.username);
             $('input[name="password"]').val(baseConfigRes.data.password);
+            $('input[name="token"]').val(baseConfigRes.data.token);
 
             // 如果有连接参数，更新测试按钮状态
-            if(baseConfigRes.data.baseUrl && baseConfigRes.data.username && baseConfigRes.data.password) {
+            if(baseConfigRes.data.baseUrl &&
+               (baseConfigRes.data.token || (baseConfigRes.data.username && baseConfigRes.data.password))) {
               $('#testConnect').removeClass('layui-btn-gray').addClass('layui-btn-normal');
             }
           }
@@ -1674,7 +1773,6 @@
         content: $('#importConfigTpl').html(),
         area: ['600px', '500px'],
         success: function(layero, index){
-          // 重新渲染表单
           form.render();
 
           // 绑定配置类型切换事件
@@ -1721,12 +1819,19 @@
             // 验证JSON格式
             var content = JSON.parse(configContent);
 
-            // 验证配置类型
-            if(configType === 'sync' && !content.tasks) {
+            // 修改基础配置验证逻辑
+            if(configType === 'base') {
+              if(!content.baseUrl) {
+                layer.msg('基础配置文件必须包含 baseUrl');
+                return;
+              }
+              // 检查是否至少包含token或者(username和password)
+              if(!content.token && !(content.username && content.password)) {
+                layer.msg('基础配置文件必须包含token或者同时包含username和password');
+                return;
+              }
+            } else if(configType === 'sync' && !content.tasks) {
               layer.msg('无效的同步配置文件');
-              return;
-            } else if(configType === 'base' && (!content.baseUrl || !content.username || !content.password)) {
-              layer.msg('无效的基础配置文件');
               return;
             }
 

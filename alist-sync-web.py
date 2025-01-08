@@ -360,12 +360,13 @@ def test_connection():
         alist = AlistSync(
             data.get('baseUrl'),
             data.get('username'),
-            data.get('password')
+            data.get('password'),
+            data.get('token')
         )
 
         return jsonify({
             "code": 200 if alist.login() else 500,
-            "message": "连接测试成功" if alist.login() else "地址或用户名或密码错误"
+            "message": "连接测试成功" if alist.login() else "地址或用户名或密码或令牌错误"
         })
     except Exception as e:
         logger.error(f"连接测试失败: {str(e)}")
@@ -462,7 +463,8 @@ class TaskManager:
         os.environ.update({
             'BASE_URL': base_config.get('baseUrl', ''),
             'USERNAME': base_config.get('username', ''),
-            'PASSWORD': base_config.get('password', '')
+            'PASSWORD': base_config.get('password', ''),
+            'TOKEN': base_config.get('token', '')
         })
 
     def _execute_single_task(self, task: Dict):
@@ -548,7 +550,8 @@ def get_storages():
         alist = AlistSync(
             config.get('baseUrl'),
             config.get('username'),
-            config.get('password')
+            config.get('password'),
+            config.get('token')
         )
 
         if alist.login():
