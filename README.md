@@ -267,4 +267,4 @@ MIT License
 <img src="https://raw.githubusercontent.com/xjxjin/alist-sync/main/static/images/令牌.png" width="700" alt="令牌获取">
 
 ## 查看任务进度
-<img src="https://raw.githubusercontent.com/xjxjin/alist-sync/main/static/images/查看任务进度.jpg" width="700" alt="查看任务进度">
+<img src="https://raw.githubusercontent.com/xjxjin/alist-sync/main/static/images/查看任务进度.png" width="700" alt="查看任务进度">
