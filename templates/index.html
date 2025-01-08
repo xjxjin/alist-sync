@@ -161,6 +161,27 @@
         gap: 5px;
       }
     }
+
+    /* 文件上传样式优化 */
+    .layui-form input[type="file"] {
+      border: 1px dashed #e6e6e6;
+      padding: 8px;
+      margin-bottom: 10px;
+    }
+
+    .layui-form-mid.layui-text-em {
+      text-align: center;
+      padding: 8px 0;
+      color: #999;
+    }
+
+    /* 移动端适配 */
+    @media screen and (max-width: 768px) {
+      .layui-layer {
+        width: 95% !important;
+        left: 2.5% !important;
+      }
+    }
   </style>
 </head>
 <body>
@@ -379,6 +400,10 @@
           <button type="button" class="layui-btn layui-btn-normal" id="runTask">立即执行</button>
           <button type="button" class="layui-btn layui-btn-primary" id="viewLogs">查看日志</button>
           <button type="reset" class="layui-btn layui-btn-primary">重置</button>
+
+          <!-- 新增导入导出按钮 -->
+          <button type="button" class="layui-btn layui-btn-warm" id="exportConfig">导出配置</button>
+          <button type="button" class="layui-btn layui-btn-warm" id="importConfig">导入配置</button>
         </div>
       </div>
     </form>
@@ -443,6 +468,26 @@
       <div class="logs-content" style="margin-top: 10px; max-height: 70vh; overflow-y: auto;">
       </div>
     </div>
+  </script>
+
+  <script type="text/html" id="importConfigTpl">
+    <form class="layui-form" style="padding: 20px;">
+      <div class="layui-form-item">
+        <label class="layui-form-label">配置类型</label>
+        <div class="layui-input-block">
+          <input type="radio" name="configType" value="base" title="基础配置" lay-filter="configType" checked>
+          <input type="radio" name="configType" value="sync" title="同步配置" lay-filter="configType">
+        </div>
+      </div>
+      <div class="layui-form-item">
+        <label class="layui-form-label">配置文件</label>
+        <div class="layui-input-block">
+          <input type="file" name="configFile" accept=".json" class="layui-input">
+          <div class="layui-form-mid layui-text-em">或</div>
+          <textarea name="configContent" placeholder="粘贴配置文件内容" class="layui-textarea" style="height: 200px;"></textarea>
+        </div>
+      </div>
+    </form>
   </script>
 
   <script>
@@ -1474,10 +1519,10 @@
                         }
                     }
                 });
-                
+
                 // 默认加载当前日志
                 loadLogs('current');
-                
+
                 // 绑定刷新按钮事件
                 layero.find('#refreshLogs').on('click', function(){
                     var date = $('#logDate').val();
@@ -1492,7 +1537,7 @@
             }
         });
     });
-    
+
     // 修改加载日志函数
     function loadLogs(date) {
         layer.load(1);
@@ -1506,11 +1551,11 @@
                     var html = '';
                     res.data.forEach(function(log){
                         html += '<div class="layui-card">';
-                        html += '<div class="layui-card-header">' + 
-                               (log.date === 'current' ? '当前日志' : log.date) + 
+                        html += '<div class="layui-card-header">' +
+                               (log.date === 'current' ? '当前日志' : log.date) +
                                '</div>';
                         html += '<div class="layui-card-body">';
-                        html += '<pre style="white-space: pre-wrap; word-wrap: break-word;">' + 
+                        html += '<pre style="white-space: pre-wrap; word-wrap: break-word;">' +
                                log.content + '</pre>';
                         html += '</div></div>';
                     });
@@ -1541,13 +1586,13 @@
     function addTask() {
         var taskId = getNextTaskId();
         var taskHtml = $('#taskList .task-item:first').clone();
-        
+
         // 更新任务ID
         taskHtml.attr('data-task-id', taskId);
-        
+
         // 清空输入值
         taskHtml.find('input[type="text"]').val('');
-        
+
         // 更新同步目标差异处置策略的radio按钮
         taskHtml.find('.syncDelAction-group input[type="radio"]').each(function() {
             var oldName = $(this).attr('name');
@@ -1555,17 +1600,17 @@
             // 重置选中状态
             $(this).prop('checked', $(this).val() === 'none');
         });
-        
+
         // 更新同步模式的radio按钮
         taskHtml.find('input[name^="syncMode_"]').each(function() {
             $(this).attr('name', `syncMode_${taskId}`);
         });
-        
+
         // ... 其他代码 ...
-        
+
         // 添加到任务列表
         $('#taskList').append(taskHtml);
-        
+
         // 重新渲染表单
         form.render();
     }
@@ -1574,7 +1619,7 @@
     function bindSyncDelActionEvents($task) {
         const taskId = $task.attr('data-task-id');
         const groupName = `syncDelAction_${taskId}`;
-        
+
         // 为该任务的 radio 按钮添加点击事件
         $task.find(`input[name="${groupName}"]`).on('click', function() {
             const $currentGroup = $task.find(`input[name="${groupName}"]`);
@@ -1605,6 +1650,179 @@
         });
       });
     });
+
+    // 导出配置
+    $('#exportConfig').on('click', function(){
+      layer.confirm('请选择要导出的配置类型', {
+        btn: ['基础配置','同步配置','取消']
+      }, function(index){
+        // 导出基础配置
+        exportConfig('base');
+        layer.close(index);
+      }, function(index){
+        // 导出同步配置
+        exportConfig('sync');
+        layer.close(index);
+      });
+    });
+
+    // 导入配置
+    $('#importConfig').on('click', function(){
+      layer.open({
+        type: 1,
+        title: '导入配置',
+        content: $('#importConfigTpl').html(),
+        area: ['600px', '500px'],
+        success: function(layero, index){
+          // 重新渲染表单
+          form.render();
+
+          // 绑定配置类型切换事件
+          form.on('radio(configType)', function(data){
+            if(data.value === 'sync') {
+              // 检查基础配置是否存在
+              $.ajax({
+                url: '/api/get-base-config',
+                method: 'GET',
+                success: function(res){
+                  if(res.code !== 200){
+                    layer.msg('请先导入基础配置文件');
+                    layero.find('input[name="configType"][value="base"]').prop('checked', true);
+                    form.render('radio');
+                  }
+                }
+              });
+            }
+          });
+
+          // 绑定文件选择事件
+          layero.find('input[type="file"]').on('change', function(e){
+            var file = e.target.files[0];
+            if(file) {
+              var reader = new FileReader();
+              reader.onload = function(e) {
+                layero.find('textarea[name="configContent"]').val(e.target.result);
+              };
+              reader.readAsText(file);
+            }
+          });
+        },
+        btn: ['导入', '取消'],
+        yes: function(index, layero){
+          var configType = layero.find('input[name="configType"]:checked').val();
+          var configContent = layero.find('textarea[name="configContent"]').val();
+
+          if(!configContent) {
+            layer.msg('请选择文件或输入配置内容');
+            return;
+          }
+
+          try {
+            // 验证JSON格式
+            var content = JSON.parse(configContent);
+
+            // 验证配置类型
+            if(configType === 'sync' && !content.tasks) {
+              layer.msg('无效的同步配置文件');
+              return;
+            } else if(configType === 'base' && (!content.baseUrl || !content.username || !content.password)) {
+              layer.msg('无效的基础配置文件');
+              return;
+            }
+
+            // 如果是同步配置,先检查基础配置是否存在
+            if(configType === 'sync') {
+              $.ajax({
+                url: '/api/get-base-config',
+                method: 'GET',
+                async: false,
+                success: function(res){
+                  if(res.code !== 200){
+                    layer.msg('请先导入基础配置文件');
+                    return false;
+                  }
+                }
+              });
+            }
+
+            // 发送导入请求
+            $.ajax({
+              url: '/api/import-config',
+              method: 'POST',
+              contentType: 'application/json',
+              data: JSON.stringify({
+                type: configType,
+                content: content
+              }),
+              success: function(res){
+                if(res.code === 200){
+                  layer.msg('导入成功', {icon: 1}, function(){
+                    layer.close(index);
+                    // 刷新页面以加载新配置
+                    location.reload();
+                  });
+                } else {
+                  layer.msg(res.message || '导入失败');
+                }
+              },
+              error: function(){
+                layer.msg('请求失败');
+              }
+            });
+          } catch(e) {
+            layer.msg('无效的JSON格式: ' + e.message);
+          }
+        }
+      });
+    });
+
+    // 添加配置类型切换事件监听
+    form.on('radio(configType)', function(data){
+      var $file = $('input[type="file"]');
+      var fileName = $file.val();
+      if(fileName) {
+        var fileType = data.value;
+        if(!fileName.includes(fileType)) {
+          $file.val('');
+          $('textarea[name="configContent"]').val('');
+          layer.msg('已清除不匹配的文件');
+        }
+      }
+    });
+
+    // 导出配置函数
+    function exportConfig(type) {
+      layer.load(1);
+      $.ajax({
+        url: '/api/export-config',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({type: type}),
+        success: function(res){
+          layer.closeAll('loading');
+          if(res.code === 200){
+            // 创建下载
+            var content = JSON.stringify(res.data.content, null, 2);
+            var blob = new Blob([content], {type: 'application/json'});
+            var url = window.URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = res.data.filename;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            layer.msg('导出成功');
+          } else {
+            layer.msg(res.message || '导出失败');
+          }
+        },
+        error: function(){
+          layer.closeAll('loading');
+          layer.msg('请求失败');
+        }
+      });
+    }
   });
   </script>
 </body>
