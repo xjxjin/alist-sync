@@ -182,6 +182,7 @@ ql raw https://github.com/xjxjin/alist-sync/raw/main/alist-sync-ql.py
 - 2025-01-09
 - 修复源目录不存在 bug
 - 修复删除模式下目标目录为空判断报错异常
+- 修复页面刷新任务展示异常
 
 ### v1.0.7
 - 2025-01-08
@@ -214,9 +215,9 @@ ql raw https://github.com/xjxjin/alist-sync/raw/main/alist-sync-ql.py
 
 ### 2024-09-06更新
 - 新增参数，处理目标目录有多的文件或者文件夹，但是源目录没有的处理方式,功能由【[RWDai](https://github.com/RWDai)】小哥提供 
-- none 什么也不做 
-- move 移动到目标目录下的trash目录 
-- delete 真实删除 
+  - none 什么也不做 
+  - move 移动到目标目录下的trash目录 
+  - delete 真实删除 
 
 ### 2024-06-29更新
 - 新增DIR_PAIRS参数个数,最多到50，参数内容和之前一致(源目录和目标目录的配对(源目录和目标目录的配对，用分号隔开，冒号分隔)),参数格式为
@@ -234,10 +235,10 @@ ql raw https://github.com/xjxjin/alist-sync/raw/main/alist-sync-ql.py
 
 ### 2024-05-13更新
 - 1.新增文件存在判断逻辑
-- 文件名称 
-- 文件大小
+  - 文件名称 
+  - 文件大小
 - 2.CRON_SCHEDULE 变更为参数可选
-- 当参数不传变更为一次调度，可以配合青龙远程调度
+  - 当参数不传变更为一次调度，可以配合青龙远程调度
 
 
 ## 问题反馈
