@@ -178,6 +178,11 @@ ql raw https://github.com/xjxjin/alist-sync/raw/main/alist-sync-ql.py
 
 ## 更新记录
 
+### v1.0.8
+- 2025-01-09
+- 修复源目录不存在 bug
+- 修复删除模式下目标目录为空判断报错异常
+
 ### v1.0.7
 - 2025-01-08
 - 新增令牌验证
