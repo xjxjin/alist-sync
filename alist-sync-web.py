@@ -870,7 +870,7 @@ if __name__ == '__main__':
         # 启动调度器
         scheduler_manager.start()
         # 启动Web服务
-        app.run(host='0.0.0.0', port=52441, debug=True)
+        app.run(host='0.0.0.0', port=52441, debug=False)
     except Exception as e:
         logger.error(f"启动失败: {e}")
     finally:
