@@ -44,8 +44,7 @@ def import_from_file(module_name: str, file_path: str) -> Any:
 # 导入AlistSync类
 try:
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    alist_sync = import_from_file('alist_sync',
-                                  os.path.join(current_dir, 'alist_sync.py'))
+    alist_sync = import_from_file('alist_sync',os.path.join(current_dir, 'alist_sync.py'))
     AlistSync = alist_sync.AlistSync
 except Exception as e:
     print(f"导入alist_sync.py失败: {e}")
@@ -480,6 +479,8 @@ class TaskManager:
             self._handle_data_sync(task)
         elif task['syncMode'] == 'file':
             self._handle_file_sync(task)
+        elif task['syncMode'] == 'file_move':
+            self._handle_file_move(task)
 
     def _handle_data_sync(self, task: Dict):
         """处理数据同步模式"""
@@ -507,6 +508,13 @@ class TaskManager:
         if dir_pairs:
             os.environ['DIR_PAIRS'] = ';'.join(dir_pairs)
             alist_sync.main()
+
+    def _handle_file_move(self, task: Dict):
+        """处理文件移动模式"""
+        dir_pairs = [f"{path['srcPathMove']}:{path['dstPathMove']}" for path in task['paths']]
+        if dir_pairs:
+            os.environ['DIR_PAIRS'] = ';'.join(dir_pairs)
+            alist_sync.main(move_file=True)
 
 
 # 创建管理器实例
