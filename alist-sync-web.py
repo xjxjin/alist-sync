@@ -513,8 +513,9 @@ class TaskManager:
         """处理文件移动模式"""
         dir_pairs = [f"{path['srcPathMove']}:{path['dstPathMove']}" for path in task['paths']]
         if dir_pairs:
+            os.environ['MOVE_FILE'] = 'true'
             os.environ['DIR_PAIRS'] = ';'.join(dir_pairs)
-            alist_sync.main(move_file=True)
+            alist_sync.main()
 
 
 # 创建管理器实例
