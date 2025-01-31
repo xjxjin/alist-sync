@@ -567,10 +567,9 @@ def main(dir_pairs: str = None, sync_del_action: str = None, exclude_dirs: str =
             logger.info(f"")
             i += 1
             alist_sync.sync_directories(src_dir.strip(), dst_dir.strip(), exclude_dirs,move_file_action)
-
-         # 文件移动的情况下删除空文件夹   
-        if move_file_action:
-            alist_sync.remove_empty_directory(src_dir.strip())
+            # 文件移动的情况下删除空文件夹   
+            if move_file_action:
+                alist_sync.remove_empty_directory(src_dir.strip())
 
         logger.info("所有同步任务执行完成")
     except Exception as e:
