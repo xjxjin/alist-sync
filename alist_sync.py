@@ -296,25 +296,30 @@ class AlistSync:
     def _recursive_copy(self, src_dir: str, dst_dir: str, exclude_dirs: str = None, move_file: bool = False) -> bool:
         """递归复制目录内容"""
         try:
-            if src_dir == exclude_dirs:
-                logger.info(f"排除目录: {src_dir}, 跳过同步")
-                return True
-            else:
-                logger.info(f"开始递归复制 - 源目录: {src_dir}, 目标目录: {dst_dir}")
-                src_contents = self.get_directory_contents(src_dir)
-                if not src_contents:
-                    logger.info(f"源目录为空或获取内容失败: {src_dir}")
-                    # return True
 
-                if self.sync_delete:
-                    self._handle_sync_delete(src_dir, dst_dir, src_contents)
-                if src_contents:
-                    for item in src_contents:
-                        if not self._copy_item_with_check(src_dir, dst_dir, item, exclude_dirs,move_file):
-                            logger.error(f"复制项目失败: {item.get('name', '未知项目')}")
-                            return False
-                    logger.info(f"递归复制完成 - 源目录: {src_dir}, 目标目录: {dst_dir}")
+            if exclude_dirs:
+                exclude_dirs_arr = exclude_dirs.split(',')
+                if src_dir in exclude_dirs_arr:
+                    logger.info(f"排除目录: {src_dir}, 跳过同步")
+                    return True
+
+            logger.info(f"开始递归复制 - 源目录: {src_dir}, 目标目录: {dst_dir}")
+            src_contents = self.get_directory_contents(src_dir)
+
+            if not src_contents:
+                logger.info(f"源目录为空或获取内容失败: {src_dir}")
                 return True
+
+            if self.sync_delete:
+                self._handle_sync_delete(src_dir, dst_dir, src_contents)
+
+            if src_contents:
+                for item in src_contents:
+                    if not self._copy_item_with_check(src_dir, dst_dir, item, exclude_dirs,move_file):
+                        logger.error(f"复制项目失败: {item.get('name', '未知项目')}")
+                        return False
+                logger.info(f"递归复制完成 - 源目录: {src_dir}, 目标目录: {dst_dir}")
+            return True
         except Exception as e:
             logger.error(f"递归复制失败: {str(e)}")
         return False
@@ -392,9 +397,12 @@ class AlistSync:
                 return False
 
             logger.info(f"处理项目: {item_name}")
-            if src_dir == exclude_dirs:
-                logger.info(f"排除目录: {src_dir}, 跳过同步")
-                return True
+
+            if exclude_dirs:
+                exclude_dirs_arr = exclude_dirs.split(',')
+                if src_dir in exclude_dirs_arr:
+                    logger.info(f"排除目录: {src_dir}, 跳过同步")
+                    return True
 
             # 如果是目录，递归处理
             if item.get('is_dir', False):
@@ -403,6 +411,9 @@ class AlistSync:
 
                 # 确保目标子目录存在
                 if not self.is_path_exists(dst_subdir):
+                    if exclude_dirs and src_subdir in exclude_dirs_arr:
+                        logger.info(f"排除目录: {src_subdir}, 跳过同步")
+                        return True
                     logger.info(f"创建目标子目录: {dst_subdir}")
                     if not self.create_directory(dst_subdir):
                         return False
