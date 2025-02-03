@@ -316,6 +316,7 @@
                 <div class="layui-input-block">
                   <input type="radio" name="syncMode_1" value="data" title="数据同步" checked lay-filter="syncMode">
                   <input type="radio" name="syncMode_1" value="file" title="文件同步" lay-filter="syncMode">
+                  <input type="radio" name="syncMode_1" value="file_move" title="文件移动" lay-filter="syncMode">
                 </div>
               </div>
 
@@ -368,11 +369,35 @@
                     </div>
                   </div>
                 </div>
-              </div>
-
-              <!-- 共同配置项 -->
-              <div class="layui-form-item">
-                <label class="layui-form-label">排除目录</label>
+                </div>
+                
+                <!-- 文件移动配置 -->
+                <div class="file-move-config" id="fileMoveConfig_1" style="display:none;">
+                  <div id="movePathPairs_1">
+                    <div class="layui-form-item move-path-pair">
+                      <label class="layui-form-label">源目录</label>
+                      <div class="layui-input-inline" style="width: 250px;">
+                        <input type="text" name="srcPathMove_1[]" placeholder="输入源目录" class="layui-input">
+                      </div>
+                      <label class="layui-form-label">目标目录</label>
+                      <div class="layui-input-inline" style="width: 250px;">
+                        <input type="text" name="dstPathMove_1[]" placeholder="输入目标目录" class="layui-input">
+                      </div>
+                      <div class="layui-inline" style="margin-left: 10px;">
+                        <button type="button" class="layui-btn layui-btn-primary layui-btn-sm add-move-path">
+                          <i class="layui-icon">&#xe654;</i>
+                        </button>
+                        <button type="button" class="layui-btn layui-btn-primary layui-btn-sm remove-move-path">
+                          <i class="layui-icon">&#xe67e;</i>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- 共同配置项 -->
+                <div class="layui-form-item">
+                  <label class="layui-form-label">排除目录</label>
                 <div class="layui-input-inline" style="width: 400px;">
                   <input type="text" name="excludeDirs[]" placeholder="多个目录用英文逗号分隔" class="layui-input">
                 </div>
@@ -609,25 +634,46 @@
     }
 
     // 同步模式切换
-    form.on('radio(syncMode)', function(data){
+    form.on('radio(syncMode)', function (data) {
       var $task = $(data.elem).closest('.task-item');
-      toggleSyncMode($task, data.value === 'file');
+      toggleSyncMode($task, data.value);
     });
 
     // 抽取同步模式切换逻辑
-    function toggleSyncMode($task, isFileSync) {
+    function toggleSyncMode($task, value) {
       // 切换显示配置区域
-      $task.find('.data-sync-config').toggle(!isFileSync);
-      $task.find('.file-sync-config').toggle(isFileSync);
-
-      if(isFileSync) {
-        // 清空数据同步配置
-        clearDataSyncInputs($task);
-        // 确保至少有一对路径输入
-        ensurePathPair($task);
-      } else {
+      if (value === 'data') {
+        $task.find('.data-sync-config').toggle(true);
+        $task.find('.file-sync-config').toggle(false);
+        $task.find('.file-move-config').toggle(false);
         // 清空文件同步配置
         clearFileSyncInputs($task);
+        // 清空文件移动配置
+        clearFileMoveInputs($task);
+      } else if (value === 'file') {
+        $task.find('.data-sync-config').toggle(false);
+        $task.find('.file-sync-config').toggle(true);
+        $task.find('.file-move-config').toggle(false);
+
+        // 清空数据同步配置
+        clearDataSyncInputs($task);
+
+        // 清空文件移动配置
+        clearFileMoveInputs($task);
+
+        // 确保文件移动至少有一对路径输入
+        ensureMovePathPair($task);
+      } else if (value === 'file_move') {
+        $task.find('.data-sync-config').toggle(false);
+        $task.find('.file-sync-config').toggle(false);
+        $task.find('.file-move-config').toggle(true);
+
+        // 清空文件同步配置
+        clearFileSyncInputs($task);
+        // 清空数据同步配置
+        clearDataSyncInputs($task);
+        // 确保文件同步至少有一对路径输入
+        ensureSyncPathPair($task);
       }
 
       form.render();
@@ -645,15 +691,28 @@
       $task.find('.file-sync-config input').val('');
     }
 
-    // 确保至少有一对路径输入
-    function ensurePathPair($task) {
+    // 清空文件移动输入
+    function clearFileMoveInputs($task) {
+      $task.find('.file-move-config input').val('');
+    }
+
+    // 确保文件同步至少有一对路径输入
+    function ensureSyncPathPair($task) {
       var $pathPairs = $task.find('[id^="pathPairs_"]');
       if($pathPairs.find('.path-pair').length === 0) {
         addPathPair($pathPairs, $task.attr('data-task-id'));
       }
     }
 
-    // 添加路径对的函数
+    // 确保文件移动至少有一对路径输入
+    function ensureMovePathPair($task) {
+      var $pathPairs = $task.find('[id^="movePathPairs_"]');
+      if($pathPairs.find('.move-path-pair').length === 0) {
+        addMovePathPair($pathPairs, $task.attr('data-task-id'));
+      }
+    }
+
+    // 添加文件同步路径对的函数
     function addPathPair($container, taskId) {
       var $pathPair = $('<div class="layui-form-item path-pair">' +
         '<label class="layui-form-label">源目录</label>' +
@@ -669,6 +728,30 @@
             '<i class="layui-icon">&#xe654;</i>' +
           '</button>' +
           '<button type="button" class="layui-btn layui-btn-primary layui-btn-sm remove-path">' +
+            '<i class="layui-icon">&#xe67e;</i>' +
+          '</button>' +
+        '</div>' +
+      '</div>');
+
+      $container.append($pathPair);
+    }
+
+    // 添加文件移动路径对的函数
+    function addMovePathPair($container, taskId) {
+      var $pathPair = $('<div class="layui-form-item move-path-pair">' +
+        '<label class="layui-form-label">源目录</label>' +
+        '<div class="layui-input-inline" style="width: 250px;">' +
+          '<input type="text" name="srcPathMove_' + taskId + '[]" placeholder="输入源目录" class="layui-input">' +
+        '</div>' +
+        '<label class="layui-form-label">目标目录</label>' +
+        '<div class="layui-input-inline" style="width: 250px;">' +
+          '<input type="text" name="dstPathMove_' + taskId + '[]" placeholder="输入目标目录" class="layui-input">' +
+        '</div>' +
+        '<div class="layui-inline" style="margin-left: 10px;">' +
+          '<button type="button" class="layui-btn layui-btn-primary layui-btn-sm add-move-path">' +
+            '<i class="layui-icon">&#xe654;</i>' +
+          '</button>' +
+          '<button type="button" class="layui-btn layui-btn-primary layui-btn-sm remove-move-path">' +
             '<i class="layui-icon">&#xe67e;</i>' +
           '</button>' +
         '</div>' +
@@ -722,7 +805,7 @@
         });
     }
 
-    // 添加路径对
+    // 文件同步添加路径对
     $(document).on('click', '.add-path', function(){
       var $taskItem = $(this).closest('.task-item');
       var $pathPairs = $taskItem.find('[id^="pathPairs_"]');
@@ -733,12 +816,35 @@
       form.render();
     });
 
-    // 删除路径对
+    // 文件同步删除路径对
     $(document).on('click', '.remove-path', function(){
       var $pathPairs = $(this).closest('[id^="pathPairs_"]');
       var $pathPair = $(this).closest('.path-pair');
 
-      if($pathPairs.find('.path-pair').length > 1) {
+      if ($pathPairs.find('.path-pair').length > 1) {
+        $pathPair.remove();
+      } else {
+        layer.msg('至少保留一对目录');
+      }
+    });
+
+    // 文件移动添加路径对
+    $(document).on('click', '.add-move-path', function () {
+      var $taskItem = $(this).closest('.task-item');
+      var $pathPairs = $taskItem.find('[id^="movePathPairs_"]');
+
+      $pathPairs.find('.move-path-pair:last hr').remove();
+      addMovePathPair($pathPairs, $taskItem.attr('data-task-id'));
+
+      form.render();
+    });
+
+    // 文件移动删除路径对
+    $(document).on('click', '.remove-move-path', function () {
+      var $pathPairs = $(this).closest('[id^="movePathPairs_"]');
+      var $pathPair = $(this).closest('.move-path-pair');
+
+      if ($pathPairs.find('.move-path-pair').length > 1) {
         $pathPair.remove();
       } else {
         layer.msg('至少保留一对目录');
@@ -813,9 +919,13 @@
       $task.find('select[name^="sourceStorage_"]').attr('name', `sourceStorage_${taskId}`);
       $task.find('#dataSyncConfig_1').attr('id', `dataSyncConfig_${taskId}`);
       $task.find('#fileSyncConfig_1').attr('id', `fileSyncConfig_${taskId}`);
+      $task.find('#fileMoveConfig_1').attr('id', `fileMoveConfig_${taskId}`);
       $task.find('#pathPairs_1').attr('id', `pathPairs_${taskId}`);
+      $task.find('#movePathPairs_1').attr('id', `movePathPairs_${taskId}`);
       $task.find('input[name^="srcPath_"]').attr('name', `srcPath_${taskId}[]`);
-      $task.find('input[name^="dstPath_"]').attr('name', `dstPath_${taskId}[]`);
+      $task.find('input[name^="dstPath_"]').attr('name', `dstPath_${taskId}[]`); 
+      $task.find('input[name^="srcPathMove_"]').attr('name', `srcPathMove_${taskId}[]`);
+      $task.find('input[name^="dstPathMove_"]').attr('name', `dstPathMove_${taskId}[]`);
     }
 
     // 清空任务输入
@@ -837,11 +947,17 @@
       $task.find(`input[name="syncMode_${taskId}"][value="data"]`).prop('checked', true);
       $task.find('.data-sync-config').show();
       $task.find('.file-sync-config').hide();
+      $task.find('.file-move-config').hide();
 
-      // 清空路径对容器
+      // 清空文件同步路径对容器
       var $pathPairs = $task.find(`#pathPairs_${taskId}`);
       $pathPairs.empty();
       addPathPair($pathPairs, taskId);
+
+      // 清空文件移动路径对容器
+      var $movePathPairs = $task.find(`#movePathPairs_${taskId}`);
+      $movePathPairs.empty();
+      addMovePathPair($movePathPairs, taskId);
     }
 
     // 删除任务
@@ -970,73 +1086,84 @@
     });
 
     // 保存同步配置的函数
-    function saveSyncConfig(tasks, callback) {
-        layer.load(1);
-        $.ajax({
-            url: '/api/save-sync-config',
-            method: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify({ tasks: tasks }),
-            success: function(res){
-                layer.closeAll('loading');
-                if(res.code === 200) {
-                    layer.msg('同步配置保存成功');
-                    // 如果有回调函数，则执行
-                    if(typeof callback === 'function') {
-                        callback();
-                    }
-                } else {
-                    layer.msg('保存失败: ' + (res.message || '未知错误'));
-                }
-            },
-            error: function(xhr, status, error){
-                layer.closeAll('loading');
-                layer.msg('请求失败: ' + (error || '未知错误'));
-            }
-        });
-    }
+      function saveSyncConfig(tasks, callback) {
+          layer.load(1);
+          $.ajax({
+              url: '/api/save-sync-config',
+              method: 'POST',
+              contentType: 'application/json',
+              data: JSON.stringify({ tasks: tasks }),
+              success: function (res) {
+                  layer.closeAll('loading');
+                  if (res.code === 200) {
+                      layer.msg('同步配置保存成功');
+                      // 如果有回调函数，则执行
+                      if (typeof callback === 'function') {
+                          callback();
+                      }
+                  } else {
+                      layer.msg('保存失败: ' + (res.message || '未知错误'));
+                  }
+              },
+              error: function (xhr, status, error) {
+                  layer.closeAll('loading');
+                  layer.msg('请求失败: ' + (error || '未知错误'));
+              }
+          });
+      }
 
     // 修改验证任务的函数
     function validateTasks(tasks) {
-        if (!tasks || tasks.length === 0) {
-            layer.msg('请至少配置一个同步任务', {icon: 2});
-            return false;
-        }
+          if (!tasks || tasks.length === 0) {
+              layer.msg('请至少配置一个同步任务', { icon: 2 });
+              return false;
+          }
 
-        for(let task of tasks) {
-            if(!task.taskName) {
-                layer.msg('任务名称不能为空');
-                return false;
-            }
+          for (let task of tasks) {
+              if (!task.taskName) {
+                  layer.msg('任务名称不能为空');
+                  return false;
+              }
 
-            if(task.syncMode === 'data') {
-                if(!task.sourceStorage) {
-                    layer.msg('请选择源存储器');
-                    return false;
-                }
-                if(!task.targetStorages || task.targetStorages.length === 0) {
-                    layer.msg('请选择目标存储器');
-                    return false;
-                }
-                if(!task.syncDirs) {
-                    layer.msg('请输入同步目录');
-                    return false;
-                }
-            } else {
-                if(!task.paths || task.paths.length === 0) {
-                    layer.msg('请至少配置一个路径对');
-                    return false;
-                }
-                for(let path of task.paths) {
-                    if(!path.srcPath || !path.dstPath) {
-                        layer.msg('源目录和目标目录不能为空');
-                        return false;
-                    }
-                }
-            }
-        }
-        return true;
-    }
+              if (task.syncMode === 'data') {
+                  if (!task.sourceStorage) {
+                      layer.msg('请选择源存储器');
+                      return false;
+                  }
+                  if (!task.targetStorages || task.targetStorages.length === 0) {
+                      layer.msg('请选择目标存储器');
+                      return false;
+                  }
+                  if (!task.syncDirs) {
+                      layer.msg('请输入同步目录');
+                      return false;
+                  }
+              } else if (task.syncMode === 'file_move') {
+                  if (!task.paths || task.paths.length === 0) {
+                      layer.msg('请至少配置一个路径对');
+                      return false;
+                  }
+                  for (let path of task.paths) {
+                      if (!path.srcPathMove || !path.dstPathMove) {
+                          layer.msg('源目录和目标目录不能为空');
+                          return false;
+                      }
+                  }
+              } else {
+                  if (!task.paths || task.paths.length === 0) {
+                      layer.msg('请至少配置一个路径对');
+                      return false;
+                  }
+                  for (let path of task.paths) {
+                      if (!path.srcPath || !path.dstPath) {
+                          layer.msg('源目录和目标目录不能为空');
+                          return false;
+                      }
+                  }
+              }
+          }
+          return true;
+      }
 
     function collectTaskData() {
         var tasks = [];
@@ -1061,7 +1188,16 @@
                 $task.find(`input[name="targetStorages_${taskId}[]"]:checked`).each(function(){
                     task.targetStorages.push($(this).val());
                 });
-            } else {
+            } else if(syncMode === 'file_move'){
+                task.paths = [];
+                $task.find('.move-path-pair').each(function(){
+                    task.paths.push({
+                        srcPathMove: $(this).find('input[name^="srcPathMove_"]').val(),
+                        dstPathMove: $(this).find('input[name^="dstPathMove_"]').val()
+                    });
+                });
+            }
+             else {
                 task.paths = [];
                 $task.find('.path-pair').each(function(){
                     task.paths.push({
@@ -1268,6 +1404,7 @@
       if(task.syncMode === 'data') {
         $task.find('.data-sync-config').show();
         $task.find('.file-sync-config').hide();
+        $task.find('.file-move-config').hide();
 
         // 设置源存储器
         const $sourceStorage = $task.find(`select[name="sourceStorage_${task.id}"]`);
@@ -1290,10 +1427,30 @@
 
           form.render('checkbox', $targetDiv.parent());
         }
-      } else {
+      }else if(task.syncMode === 'file_move'){
+        // 文件移动模式
+        $task.find('.data-sync-config').hide();
+        $task.find('.file-sync-config').hide();
+        $task.find('.file-move-config').show();
+
+        // 填充路径对
+        if(task.paths && task.paths.length) {
+          var $pathPairs = $task.find('#movePathPairs_' + $task.attr('data-task-id'));
+          $pathPairs.empty();
+
+          task.paths.forEach(function(path, index) {
+            addMovePathPair($pathPairs, $task.attr('data-task-id'));
+            var $currentPair = $pathPairs.find('.move-path-pair').eq(index);
+            $currentPair.find('input[name^="srcPathMove_"]').val(path.srcPathMove);
+            $currentPair.find('input[name^="dstPathMove_"]').val(path.dstPathMove);
+          });
+        }
+      } 
+      else {
         // 文件同步模式
         $task.find('.data-sync-config').hide();
         $task.find('.file-sync-config').show();
+        $task.find('.file-move-config').hide();
 
         // 填充路径对
         if(task.paths && task.paths.length) {
@@ -1395,6 +1552,7 @@
         $task.find('input[name^="syncMode_"][value="data"]').prop('checked', true);
         $task.find('.data-sync-config').show();
         $task.find('.file-sync-config').hide();
+        $task.find('.file-move-config').hide();
 
         // 清空数据同步配置
         $task.find('select[name^="sourceStorage_"]').val('');
@@ -1405,6 +1563,11 @@
         var $pathPairs = $task.find('[id^="pathPairs_"]');
         $pathPairs.empty();
         addPathPair($pathPairs, $task.attr('data-task-id'));
+
+        // 清空文件转移配置
+        var $movePathPairs = $task.find('[id^="movePathPairs_"]');
+        $movePathPairs.empty();
+        addMovePathPair($movePathPairs, $task.attr('data-task-id'));
 
         // 清空共同配置
         $task.find('input[name="excludeDirs[]"]').val('');
