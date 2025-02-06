@@ -28,7 +28,7 @@ WORKDIR /app
 COPY --from=builder /install /usr/local/lib/python3.10/site-packages
 
 # 只复制必要的项目文件
-COPY alist-sync-web.py alist_sync.py ./
+COPY alist-sync-web.py alist_sync.py VERSION ./
 COPY static ./static
 COPY templates ./templates
 

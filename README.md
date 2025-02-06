@@ -50,13 +50,13 @@ version: '3'
 
 services:
   alist-sync-web:
-    image: xjxjin/alist-sync:latest
-    container_name: alist-sync-web
+    image: xjxjin/alist-sync:1.1.1
+    container_name: alist-sync
     restart: unless-stopped
     ports:
       - "52441:52441"
     volumes:
-      - /DATA/AppData/alist-sync-web/data:/app/data
+      - /DATA/AppData/alist-sync/data:/app/data
     environment:
       - TZ=Asia/Shanghai 
 ```
@@ -187,6 +187,10 @@ ql raw https://github.com/xjxjin/alist-sync/raw/main/alist-sync-ql.py
 </details>
 
 ## 更新记录
+
+### v1.1.1
+- 2025-02-06
+- 修复 docker 镜像打包文件缺失
 
 ### v1.1.0
 - 2025-02-06
