@@ -1,4 +1,4 @@
-# Alist-Sync-Web
+# Alist-Sync
 
 一个基于 Web 界面的 Alist 存储同步工具，支持多任务管理、定时同步、差异处理等功能。
 
@@ -111,6 +111,7 @@ http://localhost:52441
 - 支持排除目录
 - 注：文件移动实现方式是先复制到目标路径，然后在下次自动执行任务时，判断目标路径是否已存在文件，如果存在则删除源路径文件
 
+
 ### 3. 差异处理策略
 
 提供三种差异处理方式：
@@ -168,6 +169,8 @@ CRON_SCHEDULE: 调度日期，参考cron语法   "分 时 日 月 周" 非必填
 SYNC_DELETE_ACTION: 同步删除动作，可选值为move,delete。
 当SYNC_DELETE_ACTION设置为move时，文件将移动到trash目录下；比如存储器目录为 /dav/quark，则源目录多余的文件将会移动到/dav/quark/trash 目录下
 EXCLUDE_DIRS: 排除目录
+MOVE_FILE: 是否移动文件，会删除源目录，且与SYNC_DELETE_ACTION 不能同时生效
+
 ```
 
 国内执行
@@ -184,6 +187,14 @@ ql raw https://github.com/xjxjin/alist-sync/raw/main/alist-sync-ql.py
 </details>
 
 ## 更新记录
+
+### v1.1.0
+- 2025-02-06
+- 新增文件移动功能，由【[kuke2733](https://github.com/kuke2733)】小哥提供
+- 新增版本号展示
+- 执行前会重新执行失败任务
+- 执行中排除已创建任务文件
+- 修复排除目录会在目标目录创建 bug
 
 ### v1.0.8
 - 2025-01-09
@@ -222,9 +233,9 @@ ql raw https://github.com/xjxjin/alist-sync/raw/main/alist-sync-ql.py
 
 ### 2024-09-06更新
 - 新增参数，处理目标目录有多的文件或者文件夹，但是源目录没有的处理方式,功能由【[RWDai](https://github.com/RWDai)】小哥提供 
-  - none 什么也不做 
-  - move 移动到目标目录下的trash目录 
-  - delete 真实删除 
+- none 什么也不做 
+- move 移动到目标目录下的trash目录 
+- delete 真实删除 
 
 ### 2024-06-29更新
 - 新增DIR_PAIRS参数个数,最多到50，参数内容和之前一致(源目录和目标目录的配对(源目录和目标目录的配对，用分号隔开，冒号分隔)),参数格式为
@@ -265,6 +276,16 @@ ql raw https://github.com/xjxjin/alist-sync/raw/main/alist-sync-ql.py
 - 令牌从 Alist 的 管理-设置-其他 获取，获取后不要重置令牌
 - 有其他新增功能欢迎提交 Issue。
 - 文件同步填写全目录，参照最后面图片
+- 如果无法获取docker镜像，可以参考以下脚本换源，国内执行如下代码
+```bash
+bash <(curl -sSL https://gitee.com/xjxjin/scripts/raw/main/check_docker_registry.sh)
+```
+- 国际执行如下代码
+```bash
+bash <(curl -sSL https://github.com/xjxjin/scripts/raw/main/check_docker_registry.sh)
+```
+
+
 ## License
 
 MIT License
@@ -275,6 +296,9 @@ MIT License
 
 ## 文件同步
 <img src="https://raw.githubusercontent.com/xjxjin/alist-sync/main/static/images/文件同步.png" width="700" alt="文件同步">
+
+## 文件移动
+<img src="https://raw.githubusercontent.com/xjxjin/alist-sync/main/static/images/文件移动.png" width="700" alt="文件移动">
 
 ## 令牌获取
 <img src="https://raw.githubusercontent.com/xjxjin/alist-sync/main/static/images/令牌.png" width="700" alt="令牌获取">

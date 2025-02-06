@@ -14,6 +14,9 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from logging.handlers import TimedRotatingFileHandler
 import shutil
+import http.client
+import urllib.parse
+import re
 
 
 # 替换 passlib 的密码哈希功能
@@ -44,7 +47,7 @@ def import_from_file(module_name: str, file_path: str) -> Any:
 # 导入AlistSync类
 try:
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    alist_sync = import_from_file('alist_sync',os.path.join(current_dir, 'alist_sync.py'))
+    alist_sync = import_from_file('alist_sync', os.path.join(current_dir, 'alist_sync.py'))
     AlistSync = alist_sync.AlistSync
 except Exception as e:
     print(f"导入alist_sync.py失败: {e}")
@@ -402,6 +405,11 @@ class ConfigManager:
 
     def save(self, config_name: str, data: Dict) -> bool:
         """保存配置文件"""
+        # 遍历 tasks 列表，检查 syncMode 是否为 file_move，如果是则将 syncDelAction 修改为 none
+        for task in data.get("tasks", []):
+            if task.get("syncMode") == "file_move":
+                task["syncDelAction"] = "none"
+
         config_file = os.path.join(self.storage_dir, f'{config_name}.json')
         try:
             with open(config_file, 'w', encoding='utf-8') as f:
@@ -863,6 +871,123 @@ def cleanup_backup_files(directory: str, days: int = 7):
                         logger.error(f"删除备份文件失败 {filename}: {str(e)}")
     except Exception as e:
         logger.error(f"清理备份文件失败: {str(e)}")
+
+
+def get_current_version():
+    """获取当前运行版本"""
+    try:
+        logger.info("开始获取当前版本...")
+
+        # 1. 尝试从环境变量直接获取
+        version = os.getenv('VERSION')
+        if version:
+            logger.info(f"从环境变量获取到版本号: {version}")
+            return version.lstrip('v')
+
+        # 2. 如果环境变量没有，则从VERSION文件获取
+        version_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'VERSION')
+        logger.info(f"尝试从VERSION文件获取版本号，文件路径: {version_file}")
+        if os.path.exists(version_file):
+            with open(version_file, 'r') as f:
+                version = f.read().strip()
+                logger.info(f"从VERSION文件获取到版本号: {version}")
+                return version.lstrip('v')
+        else:
+            logger.warning(f"VERSION文件不存在: {version_file}")
+
+        return "unknown"
+
+    except Exception as e:
+        logger.error(f"获取当前版本失败: {e}")
+        return "unknown"
+
+
+def get_latest_version():
+    """获取最新版本号"""
+    try:
+        logger.info("开始获取最新版本...")
+        # 首先尝试从 GitHub 获取
+        parsed_url = urllib.parse.urlparse("https://api.github.com/repos/xjxjin/alist-sync/tags")
+        logger.info(f"尝试从GitHub获取: {parsed_url.geturl()}")
+        conn = http.client.HTTPSConnection(parsed_url.netloc)
+
+        try:
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (compatible; AlistSync/1.0;)'
+            }
+            conn.request("GET", parsed_url.path, headers=headers)
+            response = conn.getresponse()
+            logger.info(f"GitHub API响应状态码: {response.status}")
+
+            if response.status == 200:
+                data = json.loads(response.read().decode())
+                if data:
+                    version_tags = []
+                    for tag in data:
+                        tag_name = tag['name'].lstrip('v')
+                        if re.match(r'^\d+\.\d+\.\d+(\.\d+)?$', tag_name):
+                            version_tags.append(tag_name)
+                    if version_tags:
+                        version_tags.sort(key=lambda v: [int(x) for x in v.split('.')])
+                        latest = version_tags[-1]
+                        logger.info(f"从GitHub获取到最新版本: {latest}")
+                        return latest
+                logger.warning("GitHub返回数据中没有有效的版本标签")
+
+            # 如果从 GitHub 获取失败，尝试从 Gitee 获取
+            logger.info("从GitHub获取失败，尝试从Gitee获取...")
+            parsed_url = urllib.parse.urlparse("https://gitee.com/api/v5/repos/xjxjin/alist-sync/tags")
+            logger.info(f"尝试从Gitee获取: {parsed_url.geturl()}")
+            conn = http.client.HTTPSConnection(parsed_url.netloc)
+            conn.request("GET", parsed_url.path, headers=headers)
+            response = conn.getresponse()
+            logger.info(f"Gitee API响应状态码: {response.status}")
+
+            if response.status == 200:
+                data = json.loads(response.read().decode())
+                if data:
+                    version_tags = []
+                    for tag in data:
+                        tag_name = tag['name'].lstrip('v')
+                        if re.match(r'^\d+\.\d+\.\d+(\.\d+)?$', tag_name):
+                            version_tags.append(tag_name)
+                    if version_tags:
+                        version_tags.sort(key=lambda v: [int(x) for x in v.split('.')])
+                        latest = version_tags[-1]
+                        logger.info(f"从Gitee获取到最新版本: {latest}")
+                        return latest
+                logger.warning("Gitee返回数据中没有有效的版本标签")
+
+            logger.warning("无法从GitHub和Gitee获取最新版本")
+            return "unknown"
+
+        finally:
+            conn.close()
+
+    except Exception as e:
+        logger.error(f"获取最新版本失败: {e}")
+        return "unknown"
+
+
+# 添加新的API路由
+@app.route('/api/version', methods=['GET'])
+def get_version():
+    try:
+        current_version = get_current_version()
+        latest_version = get_latest_version()
+        return jsonify({
+            'code': 200,
+            'data': {
+                'current_version': current_version,
+                'latest_version': latest_version
+            }
+        })
+    except Exception as e:
+        logger.error(f"获取版本信息失败: {e}")
+        return jsonify({
+            'code': 500,
+            'message': f"获取版本信息失败: {str(e)}"
+        })
 
 
 # 主函数

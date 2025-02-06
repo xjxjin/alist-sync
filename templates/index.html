@@ -182,6 +182,17 @@
         left: 2.5% !important;
       }
     }
+
+    .version-info {
+      border-top: 1px solid #eee;
+      font-size: 14px;
+    }
+    .version-info span {
+      font-family: monospace;
+      padding: 2px 5px;
+      background: #f8f8f8;
+      border-radius: 3px;
+    }
   </style>
 </head>
 <body>
@@ -370,7 +381,7 @@
                   </div>
                 </div>
                 </div>
-                
+
                 <!-- 文件移动配置 -->
                 <div class="file-move-config" id="fileMoveConfig_1" style="display:none;">
                   <div id="movePathPairs_1">
@@ -394,7 +405,7 @@
                     </div>
                   </div>
                 </div>
-                
+
                 <!-- 共同配置项 -->
                 <div class="layui-form-item">
                   <label class="layui-form-label">排除目录</label>
@@ -441,6 +452,14 @@
         </div>
       </div>
     </form>
+
+    <div class="version-info" style="text-align: center; margin-top: 20px; padding: 10px; color: #666;">
+      <div>
+        当前版本: <span id="currentVersion">加载中...</span>
+        &nbsp;&nbsp;|&nbsp;&nbsp;
+        最新版本: <span id="latestVersion">加载中...</span>
+      </div>
+    </div>
   </div>
 
   <script src="../static/layui/layui.js"></script>
@@ -546,10 +565,6 @@
         layer.msg('加载存储器列表失败: ' + (error.message || '未知错误'));
       });
     });
-
-
-
-
 
     // 加载存储器列表
     async function loadStorages() {
@@ -923,7 +938,7 @@
       $task.find('#pathPairs_1').attr('id', `pathPairs_${taskId}`);
       $task.find('#movePathPairs_1').attr('id', `movePathPairs_${taskId}`);
       $task.find('input[name^="srcPath_"]').attr('name', `srcPath_${taskId}[]`);
-      $task.find('input[name^="dstPath_"]').attr('name', `dstPath_${taskId}[]`); 
+      $task.find('input[name^="dstPath_"]').attr('name', `dstPath_${taskId}[]`);
       $task.find('input[name^="srcPathMove_"]').attr('name', `srcPathMove_${taskId}[]`);
       $task.find('input[name^="dstPathMove_"]').attr('name', `dstPathMove_${taskId}[]`);
     }
@@ -1357,8 +1372,6 @@
       }
     }
 
-
-
     // 填充任务数据的函数
     async function fillTaskData($task, task) {
       console.log('开始填充任务数据:', task);
@@ -1445,7 +1458,7 @@
             $currentPair.find('input[name^="dstPathMove_"]').val(path.dstPathMove);
           });
         }
-      } 
+      }
       else {
         // 文件同步模式
         $task.find('.data-sync-config').hide();
@@ -1755,8 +1768,6 @@
       }
     });
 
-
-
     // 修改绑定同步目标差异处置策略事件的函数
     function bindSyncDelActionEvents($task) {
         const taskId = $task.attr('data-task-id');
@@ -1971,6 +1982,38 @@
         }
       });
     }
+
+    // 添加获取版本信息的函数
+    function loadVersionInfo() {
+        $.ajax({
+            url: '/api/version',
+            method: 'GET',
+            success: function(res) {
+                if(res.code === 200) {
+                    $('#currentVersion').text(res.data.current_version);
+                    $('#latestVersion').text(res.data.latest_version);
+
+                    // 检查是否有新版本
+                    if(res.data.current_version !== 'unknown' &&
+                       res.data.latest_version !== 'unknown' &&
+                       res.data.current_version !== res.data.latest_version) {
+                        $('#latestVersion').css('color', '#ff5722')
+                            .attr('title', '发现新版本');
+                    }
+                } else {
+                    $('#currentVersion').text('获取失败');
+                    $('#latestVersion').text('获取失败');
+                }
+            },
+            error: function() {
+                $('#currentVersion').text('获取失败');
+                $('#latestVersion').text('获取失败');
+            }
+        });
+    }
+
+    // 页面加载时获取版本信息
+    loadVersionInfo();
   });
   </script>
 </body>
