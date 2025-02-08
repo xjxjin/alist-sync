@@ -50,7 +50,7 @@ version: '3'
 
 services:
   alist-sync-web:
-    image: xjxjin/alist-sync:1.1.1
+    image: xjxjin/alist-sync:1.1.2
     container_name: alist-sync
     restart: unless-stopped
     ports:
@@ -187,6 +187,10 @@ ql raw https://github.com/xjxjin/alist-sync/raw/main/alist-sync-ql.py
 </details>
 
 ## 更新记录
+
+### v1.1.2
+- 2025-02-08
+- 优化文件移动模式下保留源目录
 
 ### v1.1.1
 - 2025-02-06

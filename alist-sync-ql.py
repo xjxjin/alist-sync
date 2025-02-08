@@ -263,14 +263,15 @@ class AlistSync:
                         self._remove_empty_folders(base_dir, src_path)
             else:
                 # 文件移动的情况下删除空文件夹
-                # 找到最后一个 / 的索引
-                last_slash_index = src_dir.rfind('/')
-                # 分割字符串
-                remove_dir = src_dir[:last_slash_index]
-                remove_names = src_dir[last_slash_index + 1:]
-                self._directory_operation("remove", dir=remove_dir, names=[remove_names])
-                logger.info(f"删除空文件夹【{src_dir}】成功")
-                self._remove_empty_folders(base_dir, remove_dir)
+                if base_dir != src_dir:
+                    # 找到最后一个 / 的索引
+                    last_slash_index = src_dir.rfind('/')
+                    # 分割字符串
+                    remove_dir = src_dir[:last_slash_index]
+                    remove_names = src_dir[last_slash_index + 1:]
+                    self._directory_operation("remove", dir=remove_dir, names=[remove_names])
+                    logger.info(f"删除空文件夹【{src_dir}】成功")
+                    self._remove_empty_folders(base_dir, remove_dir)
 
     def _copy_item(self, src_dir: str, dst_dir: str, item_name: str) -> bool:
         """复制文件或目录"""
