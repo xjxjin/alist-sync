@@ -17,6 +17,7 @@ import shutil
 import http.client
 import urllib.parse
 import re
+import socket
 
 
 # 替换 passlib 的密码哈希功能
@@ -85,6 +86,22 @@ if not os.path.exists(USER_CONFIG_FILE):
     }
     with open(USER_CONFIG_FILE, 'w', encoding='utf-8') as f:
         json.dump(default_config, f, indent=2, ensure_ascii=False)
+
+# 添加版本配置文件路径常量
+VERSION_CONFIG_FILE = os.path.join(os.path.dirname(__file__), STORAGE_DIR, 'alist_sync_version.json')
+
+# 确保配置目录存在
+os.makedirs(os.path.dirname(VERSION_CONFIG_FILE), exist_ok=True)
+
+# 如果版本配置文件不存在，创建默认配置
+if not os.path.exists(VERSION_CONFIG_FILE):
+    default_version_config = {
+        "latest_version": "",
+        "update_time": "",
+        "source": "github"
+    }
+    with open(VERSION_CONFIG_FILE, 'w', encoding='utf-8') as f:
+        json.dump(default_version_config, f, indent=2, ensure_ascii=False)
 
 
 def load_users():
@@ -482,6 +499,10 @@ class TaskManager:
 
         os.environ['SYNC_DELETE_ACTION'] = sync_del_action
         os.environ['EXCLUDE_DIRS'] = task.get('excludeDirs', '')
+
+        # 添加正则表达式环境变量
+        if task.get('regexPatterns'):
+            os.environ['REGEX_PATTERNS'] = task.get('regexPatterns')
 
         if task['syncMode'] == 'data':
             self._handle_data_sync(task)
@@ -902,6 +923,128 @@ def get_current_version():
         return "unknown"
 
 
+def load_version_config():
+    """加载版本配置"""
+    try:
+        with open(VERSION_CONFIG_FILE, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except Exception as e:
+        logger.error(f"加载版本配置失败: {e}")
+        return {
+            "latest_version": "",
+            "update_time": "",
+            "source": "github"
+        }
+
+
+def save_version_config(config):
+    """保存版本配置"""
+    try:
+        with open(VERSION_CONFIG_FILE, 'w', encoding='utf-8') as f:
+            json.dump(config, f, indent=2, ensure_ascii=False)
+        return True
+    except Exception as e:
+        logger.error(f"保存版本配置失败: {e}")
+        return False
+
+
+def should_update_version(update_time):
+    """检查是否需要更新版本信息"""
+    if not update_time:
+        return True
+    try:
+        last_update = datetime.datetime.fromisoformat(update_time)
+        now = datetime.datetime.now()
+        return (now - last_update).days >= 7
+    except Exception as e:
+        logger.error(f"检查更新时间失败: {e}")
+        return True
+
+
+def get_latest_version_from_github():
+    """从 GitHub 获取最新版本"""
+    # 首先尝试从 GitHub 获取
+    parsed_url = urllib.parse.urlparse("https://api.github.com/repos/xjxjin/alist-sync/tags")
+    logger.info(f"尝试从GitHub获取: {parsed_url.geturl()}")
+    conn = http.client.HTTPSConnection(parsed_url.netloc)
+
+    try:
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (compatible; AlistSync/1.0;)'
+        }
+        conn.request("GET", parsed_url.path, headers=headers)
+        response = conn.getresponse()
+        logger.info(f"GitHub API响应状态码: {response.status}")
+
+        if response.status == 200:
+            data = json.loads(response.read().decode())
+            if data:
+                version_tags = []
+                for tag in data:
+                    tag_name = tag['name'].lstrip('v')
+                    if re.match(r'^\d+\.\d+\.\d+(\.\d+)?$', tag_name):
+                        version_tags.append(tag_name)
+                if version_tags:
+                    version_tags.sort(key=lambda v: [int(x) for x in v.split('.')])
+                    latest = version_tags[-1]
+                    logger.info(f"从GitHub获取到最新版本: {latest}")
+                    return latest
+            logger.warning("GitHub返回数据中没有有效的版本标签")
+
+    except (socket.timeout, TimeoutError) as e:
+        logger.error(f"从GitHub获取版本超时: {e}")
+        return None
+    except Exception as e:
+        logger.error(f"从GitHub获取版本失败: {e}")
+        return None
+    finally:
+        if 'conn' in locals():
+            conn.close()
+
+
+def get_latest_version_from_gitee():
+    """从 Gitee 获取最新版本"""
+    try:
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (compatible; AlistSync/1.0;)'
+        }
+        # 如果从 GitHub 获取失败，尝试从 Gitee 获取
+        logger.info("从GitHub获取失败，尝试从Gitee获取...")
+        parsed_url = urllib.parse.urlparse("https://gitee.com/api/v5/repos/xjxjin/alist-sync/tags")
+        logger.info(f"尝试从Gitee获取: {parsed_url.geturl()}")
+        conn = http.client.HTTPSConnection(parsed_url.netloc)
+        conn.request("GET", parsed_url.path, headers=headers)
+        response = conn.getresponse()
+        logger.info(f"Gitee API响应状态码: {response.status}")
+
+        if response.status == 200:
+            data = json.loads(response.read().decode())
+            if data:
+                version_tags = []
+                for tag in data:
+                    tag_name = tag['name'].lstrip('v')
+                    if re.match(r'^\d+\.\d+\.\d+(\.\d+)?$', tag_name):
+                        version_tags.append(tag_name)
+                if version_tags:
+                    version_tags.sort(key=lambda v: [int(x) for x in v.split('.')])
+                    latest = version_tags[-1]
+                    logger.info(f"从Gitee获取到最新版本: {latest}")
+                    return latest
+            logger.warning("Gitee返回数据中没有有效的版本标签")
+
+        logger.warning("无法从GitHub和Gitee获取最新版本")
+        return "unknown"
+    except (socket.timeout, TimeoutError) as e:
+        logger.error(f"从Gitee获取版本超时: {e}")
+        return None
+    except Exception as e:
+        logger.error(f"从Gitee获取版本失败: {e}")
+        return None
+    finally:
+        if 'conn' in locals():
+            conn.close()
+
+
 def get_latest_version():
     """获取最新版本号"""
     try:
@@ -974,7 +1117,31 @@ def get_latest_version():
 def get_version():
     try:
         current_version = get_current_version()
-        latest_version = get_latest_version()
+        # latest_version = get_latest_version()
+        source = "github"
+        # 检查是否需要更新版本信息
+
+        version_config = load_version_config()
+        if should_update_version(version_config.get('update_time')):
+            latest_version = get_latest_version_from_github()
+            if not latest_version:
+                latest_version = get_latest_version_from_gitee()
+                source = "gitee"
+            if latest_version:
+                version_config.update({
+                    'latest_version': latest_version,
+                    'update_time': datetime.datetime.now().isoformat(),
+                    'source': source
+                })
+
+            else:
+                # 如果获取失败，使用缓存的版本
+                latest_version = version_config.get('latest_version', 'unknown')
+            save_version_config(version_config)
+        else:
+            # 使用缓存的版本
+            latest_version = version_config.get('latest_version', 'unknown')
+
         return jsonify({
             'code': 200,
             'data': {

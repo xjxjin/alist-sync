@@ -1,128 +1,125 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Alist-Sync 登录</title>
-  <link rel="icon" href="../static/images/favicon.ico" type="image/x-icon">
-  <link href="../static/layui/css/layui.css" rel="stylesheet">
-  <style>
-    .login-container {
-      width: 100%;
-      height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      background-color: #f2f2f2;
-    }
-    .login-box {
-      width: 400px;
-      padding: 30px;
-      background: #fff;
-      border-radius: 4px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    }
-    .login-header {
-      text-align: center;
-      margin-bottom: 30px;
-    }
-    .login-header h2 {
-      color: #009688;
-      font-size: 24px;
-    }
-    /* 移动端适配 */
-    @media screen and (max-width: 768px) {
-      .login-box {
-        width: 90%;
-        padding: 20px;
-        margin: 0 15px;
-      }
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Alist-Sync 登录</title>
+	<link rel="icon" href="../static/images/favicon.ico" type="image/x-icon">
+	<link href="../static/layui/css/layui.css" rel="stylesheet">
+	<style>
+		.login-container {
+		  width: 100%;
+		  height: 100vh;
+		  display: flex;
+		  justify-content: center;
+		  align-items: center;
+		  background-color: #f2f2f2;
+		}
+		.login-box {
+		  width: 400px;
+		  padding: 30px;
+		  background: #fff;
+		  border-radius: 4px;
+		  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+		}
+		.login-header {
+		  text-align: center;
+		  margin-bottom: 30px;
+		}
+		.login-header h2 {
+		  color: #009688;
+		  font-size: 24px;
+		}
+		/* 移动端适配 */
+		@media screen and (max-width: 768px) {
+		  .login-box {
+		    width: 90%;
+		    padding: 20px;
+		    margin: 0 15px;
+		  }
 
-      .login-header h2 {
-        font-size: 20px;
-      }
+		  .login-header h2 {
+		    font-size: 20px;
+		  }
 
-      .layui-form-item {
-        margin-bottom: 10px;
-      }
+		  .layui-form-item {
+		    margin-bottom: 10px;
+		  }
 
-      .layui-input {
-        height: 38px;
-        line-height: 38px;
-      }
+		  .layui-input {
+		    height: 38px;
+		    line-height: 38px;
+		  }
 
-      .layui-btn {
-        height: 38px;
-        line-height: 38px;
-      }
-    }
-  </style>
+		  .layui-btn {
+		    height: 38px;
+		    line-height: 38px;
+		  }
+		}
+	</style>
 </head>
 <body>
-  <div class="login-container">
-    <div class="login-box">
-      <div class="login-header">
-        <img src="../static/images/logo.png" alt="Alist-Sync" style="width: 64px; height: 64px; margin-bottom: 10px;">
-        <h2>Alist-Sync 登录</h2>
-      </div>
-      <form class="layui-form" action="javascript:void(0);">
-        <div class="layui-form-item">
-          <div class="layui-input-block" style="margin-left: 0;">
-            <input type="text" name="username" required lay-verify="required"
-              placeholder="请输入用户名" autocomplete="off" class="layui-input">
-          </div>
-        </div>
-        <div class="layui-form-item">
-          <div class="layui-input-block" style="margin-left: 0;">
-            <input type="password" name="password" required lay-verify="required"
-              placeholder="请输入密码" autocomplete="off" class="layui-input">
-          </div>
-        </div>
-        <div class="layui-form-item">
-          <div class="layui-input-block" style="margin-left: 0;">
-            <button class="layui-btn layui-btn-fluid" lay-submit lay-filter="login">登录</button>
-          </div>
-        </div>
-      </form>
-    </div>
-  </div>
+	<div class="login-container">
+		<div class="login-box">
+			<div class="login-header">
+				<img src="../static/images/logo.png" alt="Alist-Sync" style="width: 64px; height: 64px; margin-bottom: 10px;">
+				<h2>Alist-Sync 登录</h2>
+			</div>
+			<form class="layui-form" action="javascript:void(0);">
+				<div class="layui-form-item">
+					<div class="layui-input-block" style="margin-left: 0;">
+						<input type="text" name="username" required lay-verify="required" placeholder="请输入用户名" autocomplete="off" class="layui-input">
+					</div>
+				</div>
+				<div class="layui-form-item">
+					<div class="layui-input-block" style="margin-left: 0;">
+						<input type="password" name="password" required lay-verify="required" placeholder="请输入密码" autocomplete="off" class="layui-input">
+					</div>
+				</div>
+				<div class="layui-form-item">
+					<div class="layui-input-block" style="margin-left: 0;">
+						<button class="layui-btn layui-btn-fluid" lay-submit lay-filter="login">登录</button>
+					</div>
+				</div>
+			</form>
+		</div>
+	</div>
+	<script src="../static/layui/layui.js"></script>
+	<script>
+		layui.use(['form', 'layer'], function(){
+		  var form = layui.form
+		  ,layer = layui.layer
+		  ,$ = layui.$;
 
-  <script src="../static/layui/layui.js"></script>
-  <script>
-  layui.use(['form', 'layer'], function(){
-    var form = layui.form
-    ,layer = layui.layer
-    ,$ = layui.$;
-
-    // 登录提交
-    form.on('submit(login)', function(data){
-      layer.load(1);
-      $.ajax({
-        url: '/api/login',
-        method: 'POST',
-        contentType: 'application/json',
-        data: JSON.stringify(data.field),
-        success: function(res){
-          layer.closeAll('loading');
-          if(res.code === 200){
-            layer.msg('登录成功', {
-              icon: 1,
-              time: 1000
-            }, function(){
-              window.location.href = '/'; // 登录成功后跳转到首页
-            });
-          } else {
-            layer.msg(res.message || '登录失败');
-          }
-        },
-        error: function(){
-          layer.closeAll('loading');
-          layer.msg('请求失败');
-        }
-      });
-      return false;
-    });
-  });
-  </script>
+		  // 登录提交
+		  form.on('submit(login)', function(data){
+		    layer.load(1);
+		    $.ajax({
+		      url: '/api/login',
+		      method: 'POST',
+		      contentType: 'application/json',
+		      data: JSON.stringify(data.field),
+		      success: function(res){
+		        layer.closeAll('loading');
+		        if(res.code === 200){
+		          layer.msg('登录成功', {
+		            icon: 1,
+		            time: 1000
+		          }, function(){
+		            window.location.href = '/'; // 登录成功后跳转到首页
+		          });
+		        } else {
+		          layer.msg(res.message || '登录失败');
+		        }
+		      },
+		      error: function(){
+		        layer.closeAll('loading');
+		        layer.msg('请求失败');
+		      }
+		    });
+		    return false;
+		  });
+		});
+	</script>
 </body>
-</html> 
+</html>

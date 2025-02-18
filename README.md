@@ -50,7 +50,7 @@ version: '3'
 
 services:
   alist-sync-web:
-    image: xjxjin/alist-sync:1.1.2
+    image: xjxjin/alist-sync:latest
     container_name: alist-sync
     restart: unless-stopped
     ports:
@@ -170,6 +170,7 @@ SYNC_DELETE_ACTION: 同步删除动作，可选值为move,delete。
 当SYNC_DELETE_ACTION设置为move时，文件将移动到trash目录下；比如存储器目录为 /dav/quark，则源目录多余的文件将会移动到/dav/quark/trash 目录下
 EXCLUDE_DIRS: 排除目录
 MOVE_FILE: 是否移动文件，会删除源目录，且与SYNC_DELETE_ACTION 不能同时生效
+REGEX_PATTERNS: 用于匹配文件名的正则表达式
 
 ```
 
@@ -187,6 +188,11 @@ ql raw https://github.com/xjxjin/alist-sync/raw/main/alist-sync-ql.py
 </details>
 
 ## 更新记录
+
+### v1.1.3
+- 2025-02-18
+- 新增正则表达式功能
+- 优化版本号展示
 
 ### v1.1.2
 - 2025-02-08
