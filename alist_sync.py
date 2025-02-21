@@ -331,7 +331,7 @@ class AlistSync:
             for regex in self.regex_patterns_list:
                 if regex.match(path):
                     return True
-        if self.regex_pattern.match(path):
+        if self.regex_pattern and self.regex_pattern.match(path):
             return True
         return False
 
