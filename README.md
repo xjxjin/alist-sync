@@ -1,3 +1,6 @@
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=xjxjin/alist-sync&type=Date)](https://star-history.com/#xjxjin/alist-sync&Date)
 # Alist-Sync
 
 一个基于 Web 界面的 Alist 存储同步工具，支持多任务管理、定时同步、差异处理等功能。
