@@ -191,6 +191,9 @@ ql raw https://github.com/xjxjin/alist-sync/raw/main/alist-sync-ql.py
 </details>
 
 ## 更新记录
+### v1.1.5
+- 2025-03-15
+- 修复正则表达式为空报错问题
 
 ### v1.1.4
 - 2025-02-21
