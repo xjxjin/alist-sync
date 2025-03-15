@@ -419,6 +419,12 @@
 									<input type="text" name="excludeDirs[]" placeholder="多个目录用英文逗号分隔" class="layui-input">
 								</div>
 							</div>
+                            <div class="layui-form-item">
+								<label class="layui-form-label" title="不同步超出指定大小的文件（字节）">排除大小</label>
+								<div class="layui-input-inline" style="width: 400px;">
+									<input type="number" name="excludeSize[]" placeholder="不同步超出指定大小的文件（字节）" class="layui-input">
+								</div>
+							</div>
 							<div class="layui-form-item">
 								<label class="layui-form-label" title="用于匹配文件名的正则表达式">正则表达式</label>
 								<div class="layui-input-inline" style="width: 400px;">
@@ -1194,6 +1200,7 @@
 		              syncDelAction: $task.find(`input[name="syncDelAction_${taskId}"]:checked`).val(),
 		              syncMode: syncMode,
 		              excludeDirs: $task.find('input[name="excludeDirs[]"]').val(),
+                      excludeSize: $task.find('input[name="excludeSize[]"]').val(),
 		              cron: $task.find('input[name="cron[]"]').val()
 		          };
 
@@ -1489,6 +1496,9 @@
 		    // 设置排除目录
 		    $task.find('input[name="excludeDirs[]"]').val(task.excludeDirs);
 
+            // 设置排除大小
+		    $task.find('input[name="excludeSize[]"]').val(task.excludeSize);
+
 		    // 设置定时调度器
 		    $task.find('input[name="cron[]"]').val(task.cron);
 
@@ -1596,6 +1606,7 @@
 
 		      // 清空共同配置
 		      $task.find('input[name="excludeDirs[]"]').val('');
+		      $task.find('input[name="excludeSize[]"]').val(0);
 		      $task.find('input[name="cron[]"]').val('');
 		      $task.find('.next-run-time').empty();
 		    });
