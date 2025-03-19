@@ -331,7 +331,7 @@ class AlistSync:
             for regex in self.regex_patterns_list:
                 if regex.match(path):
                     return True
-        if self.regex_pattern.match(path):
+        if self.regex_pattern and self.regex_pattern.match(path):
             return True
         return False
 
@@ -482,15 +482,16 @@ class AlistSync:
             else:
 
                 # 判断正则表达式,如果符合正则表达式跳过复制
-                if not self.check_regex(item_name):
-                    logger.info(f"不符合正则表达式: {src_path}, 跳过同步")
-                    return True
-
-                # 检查是否在未完成的任务列表中，如果存在，则跳过
-                for task_item in self.task_list:
-                    if src_dir in task_item and dst_dir in task_item and src_path in task_item:
-                        logger.info(f"文件【{item_name}】在未完成的任务列表中，跳过复制")
+                if(self.regex_patterns_list or self.regex_pattern):
+                    if not self.check_regex(item_name):
+                        logger.info(f"不符合正则表达式: {src_path}, 跳过同步")
                         return True
+
+                    # 检查是否在未完成的任务列表中，如果存在，则跳过
+                    for task_item in self.task_list:
+                        if src_dir in task_item and dst_dir in task_item and src_path in task_item:
+                            logger.info(f"文件【{item_name}】在未完成的任务列表中，跳过复制")
+                            return True
                 # 检查目标文件是否存在
                 if not self.is_path_exists(dst_path):
                     logger.info(f"复制文件: {item_name}")
