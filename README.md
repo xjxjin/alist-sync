@@ -172,6 +172,7 @@ CRON_SCHEDULE: 调度日期，参考cron语法   "分 时 日 月 周" 非必填
 SYNC_DELETE_ACTION: 同步删除动作，可选值为move,delete。
 当SYNC_DELETE_ACTION设置为move时，文件将移动到trash目录下；比如存储器目录为 /dav/quark，则源目录多余的文件将会移动到/dav/quark/trash 目录下
 EXCLUDE_DIRS: 排除目录
+EXCLUDE_SIZE: 排除大小，不同步超出指定大小的文件（字节）
 MOVE_FILE: 是否移动文件，会删除源目录，且与SYNC_DELETE_ACTION 不能同时生效
 REGEX_PATTERNS: 用于匹配文件名的正则表达式
 
@@ -191,6 +192,10 @@ ql raw https://github.com/xjxjin/alist-sync/raw/main/alist-sync-ql.py
 </details>
 
 ## 更新记录
+### v1.1.6
+- 2025-03-24
+- 新增不同步超出指定大小的文件功能
+
 ### v1.1.5
 - 2025-03-15
 - 修复正则表达式为空报错问题

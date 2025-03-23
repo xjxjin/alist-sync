@@ -82,7 +82,7 @@ def parse_time_and_adjust_utc(date_str: str) -> datetime:
 class AlistSync:
     def __init__(self, base_url: str, username: str = None, password: str = None, token: str = None,
                  sync_delete_action: str = "none", exclude_list: List[str] = None, move_file_action: bool = False,
-                 regex_patterns_list=None, regex_pattern=None,
+                 regex_patterns_list=None, regex_pattern=None, exclude_size: int = 0,
                  task_list: List[str] = None):
         """初始化AlistSync类"""
         if regex_patterns_list is None:
@@ -99,6 +99,7 @@ class AlistSync:
         self.move_file_action = move_file_action
         self.regex_patterns_list = regex_patterns_list
         self.regex_pattern = regex_pattern
+        self.exclude_size = exclude_size
 
     def _create_connection(self) -> Union[http.client.HTTPConnection, http.client.HTTPSConnection]:
         """创建HTTP(S)连接"""
@@ -492,13 +493,21 @@ class AlistSync:
                         if src_dir in task_item and dst_dir in task_item and src_path in task_item:
                             logger.info(f"文件【{item_name}】在未完成的任务列表中，跳过复制")
                             return True
+
+                # 获取源文件信息
+                src_size = item.get("size")
+
+                # 不同步超出指定大小的文件
+                if 0 < self.exclude_size <= src_size:
+                    logger.info(f"文件【{item_name}】大小【{src_size}】超出指定大小【{self.exclude_size}】，跳过复制")
+                    return True
+
                 # 检查目标文件是否存在
                 if not self.is_path_exists(dst_path):
                     logger.info(f"复制文件: {item_name}")
                     return self._copy_item(src_dir, dst_dir, item_name)
                 else:
-                    # 获取源文件和目标文件信息
-                    src_size = item.get("size")
+                    # 获取目标文件信息
                     dst_info = self.get_file_info(dst_path)
 
                     if not dst_info:
@@ -565,7 +574,7 @@ def get_dir_pairs_from_env() -> List[str]:
 
 
 def main(dir_pairs: str = None, sync_del_action: str = None, exclude_dirs: str = None, move_file: bool = False,
-         regex_patterns: str = None, ):
+         regex_patterns: str = None, exclude_size: int = 0):
     """主函数，用于命令行执行"""
     code_souce()
     xiaojin()
@@ -599,6 +608,10 @@ def main(dir_pairs: str = None, sync_del_action: str = None, exclude_dirs: str =
     else:
         exclude_dirs = os.environ.get("EXCLUDE_DIRS", "")
         exclude_list = exclude_dirs.split(",")
+
+    # 排除大小
+    if os.environ.get("EXCLUDE_SIZE"):
+        exclude_size = int(os.environ.get("EXCLUDE_SIZE"))
 
     # 正则表达式
     if not regex_patterns:
@@ -639,7 +652,7 @@ def main(dir_pairs: str = None, sync_del_action: str = None, exclude_dirs: str =
 
     # 创建AlistSync实例时添加token参数
     alist_sync = AlistSync(base_url, username, password, token, sync_delete_action, exclude_list, move_file_action,
-                           regex_and_replace_list, regex_pattern)
+                           regex_and_replace_list, regex_pattern, exclude_size)
     # 验证 token 是否正确
     if not alist_sync.login():
         logger.error("令牌或用户名密码不正确")
